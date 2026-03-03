@@ -1,0 +1,322 @@
+{
+  "editable": true,
+  "panels": [
+    {
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 0
+      },
+      "title": "Employees per Week (Trend)",
+      "type": "barchart",
+      "options": {
+        "xField": "Week",
+        "showValue": "always",
+        "stacking": "none",
+        "xTickLabelRotation": -45,
+        "xTickLabelSpacing": 80
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "grafana-postgresql-datasource",
+            "uid": "${DS_POSTGRES}"
+          },
+          "format": "table",
+          "rawSql": "\n        SELECT 'Week ' || to_char(work_date, 'IW') as \"Week\",\n               COUNT(DISTINCT CASE WHEN EXTRACT(YEAR FROM work_date) = 2023 THEN employee_name END) as \"2023\",\n               COUNT(DISTINCT CASE WHEN EXTRACT(YEAR FROM work_date) = 2024 THEN employee_name END) as \"2024\",\n               COUNT(DISTINCT CASE WHEN EXTRACT(YEAR FROM work_date) = 2025 THEN employee_name END) as \"2025\",\n               COUNT(DISTINCT CASE WHEN EXTRACT(YEAR FROM work_date) = 2026 THEN employee_name END) as \"2026\"\n        FROM work_logs \n        WHERE work_date::timestamp >= $__timeFrom()\n          AND work_date::timestamp <= $__timeTo()\n          AND department IN (${service:sqlstring})\n          AND activity_type IN (${activity:sqlstring})\n          AND employee_name IN (${employee:sqlstring})\n          AND employment_type IS NOT NULL \n          AND EXTRACT(YEAR FROM work_date)::text IN (${year:sqlstring}) \n          AND to_char(work_date, 'IW') IN (${week:sqlstring})\n          AND (\n              ('RW' IN (${ma_kat:sqlstring}) AND employment_type IN ('Full-time', 'Contract'))\n              OR ('Sub' IN (${ma_kat:sqlstring}) AND employment_type IN ('Part-time', 'Freelancer', 'Subcontractor'))\n              OR ('Temp' IN (${ma_kat:sqlstring}) AND employment_type IN ('Temporary', 'Loan'))\n          )\n        GROUP BY to_char(work_date, 'IW') ORDER BY to_char(work_date, 'IW')\n    ",
+          "refId": "A"
+        }
+      ]
+    },
+    {
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 0
+      },
+      "title": "Hours per Month (Trend)",
+      "type": "barchart",
+      "options": {
+        "xField": "Month",
+        "showValue": "always",
+        "stacking": "none",
+        "xTickLabelRotation": 0
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "grafana-postgresql-datasource",
+            "uid": "${DS_POSTGRES}"
+          },
+          "format": "table",
+          "rawSql": "\n        SELECT to_char(work_date, 'Mon') as \"Month\",\n               ROUND(SUM(CASE WHEN EXTRACT(YEAR FROM work_date) = 2023 THEN duration ELSE 0 END)::numeric, 0) as \"2023\",\n               ROUND(SUM(CASE WHEN EXTRACT(YEAR FROM work_date) = 2024 THEN duration ELSE 0 END)::numeric, 0) as \"2024\",\n               ROUND(SUM(CASE WHEN EXTRACT(YEAR FROM work_date) = 2025 THEN duration ELSE 0 END)::numeric, 0) as \"2025\",\n               ROUND(SUM(CASE WHEN EXTRACT(YEAR FROM work_date) = 2026 THEN duration ELSE 0 END)::numeric, 0) as \"2026\"\n        FROM work_logs \n        WHERE work_date::timestamp >= $__timeFrom()\n          AND work_date::timestamp <= $__timeTo()\n          AND department IN (${service:sqlstring})\n          AND activity_type IN (${activity:sqlstring})\n          AND employee_name IN (${employee:sqlstring})\n          AND employment_type IS NOT NULL \n          AND EXTRACT(YEAR FROM work_date)::text IN (${year:sqlstring}) \n          AND to_char(work_date, 'IW') IN (${week:sqlstring})\n          AND (\n              ('RW' IN (${ma_kat:sqlstring}) AND employment_type IN ('Full-time', 'Contract'))\n              OR ('Sub' IN (${ma_kat:sqlstring}) AND employment_type IN ('Part-time', 'Freelancer', 'Subcontractor'))\n              OR ('Temp' IN (${ma_kat:sqlstring}) AND employment_type IN ('Temporary', 'Loan'))\n          )\n        GROUP BY to_char(work_date, 'Mon'), EXTRACT(MONTH FROM work_date) ORDER BY EXTRACT(MONTH FROM work_date)\n    ",
+          "refId": "A"
+        }
+      ]
+    },
+    {
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 8
+      },
+      "title": "Section 1: Analytics Tables (Excel Format)",
+      "type": "row"
+    },
+    {
+      "gridPos": {
+        "h": 15,
+        "w": 7,
+        "x": 0,
+        "y": 9
+      },
+      "title": "Employee Count by Week",
+      "type": "table",
+      "options": {
+        "showHeader": true,
+        "footer": {
+          "show": true,
+          "reducer": [
+            "sum"
+          ],
+          "fields": [
+            "Count"
+          ]
+        }
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "grafana-postgresql-datasource",
+            "uid": "${DS_POSTGRES}"
+          },
+          "format": "table",
+          "rawSql": "\n        SELECT to_char(work_date, 'IW') as \"Week\",\n               EXTRACT(YEAR FROM work_date)::text as \"Year\",\n               COUNT(DISTINCT employee_name) as \"Count\"\n        FROM work_logs \n        WHERE work_date::timestamp >= $__timeFrom()\n          AND work_date::timestamp <= $__timeTo()\n          AND department IN (${service:sqlstring})\n          AND activity_type IN (${activity:sqlstring})\n          AND employee_name IN (${employee:sqlstring})\n          AND employment_type IS NOT NULL \n          AND EXTRACT(YEAR FROM work_date)::text IN (${year:sqlstring}) \n          AND to_char(work_date, 'IW') IN (${week:sqlstring})\n          AND (\n              ('RW' IN (${ma_kat:sqlstring}) AND employment_type IN ('Full-time', 'Contract'))\n              OR ('Sub' IN (${ma_kat:sqlstring}) AND employment_type IN ('Part-time', 'Freelancer', 'Subcontractor'))\n              OR ('Temp' IN (${ma_kat:sqlstring}) AND employment_type IN ('Temporary', 'Loan'))\n          )\n        GROUP BY 1, 2 ORDER BY 1, 2\n    ",
+          "refId": "A"
+        }
+      ]
+    },
+    {
+      "gridPos": {
+        "h": 15,
+        "w": 8,
+        "x": 7,
+        "y": 9
+      },
+      "title": "Working Hours by Week",
+      "type": "table",
+      "options": {
+        "showHeader": true,
+        "footer": {
+          "show": true,
+          "reducer": [
+            "sum"
+          ],
+          "fields": [
+            "Hours"
+          ]
+        }
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "grafana-postgresql-datasource",
+            "uid": "${DS_POSTGRES}"
+          },
+          "format": "table",
+          "rawSql": "\n        SELECT to_char(work_date, 'IW') as \"Week\",\n               EXTRACT(YEAR FROM work_date)::text as \"Year\",\n               ROUND(SUM(duration)::numeric, 0) as \"Hours\"\n        FROM work_logs \n        WHERE work_date::timestamp >= $__timeFrom()\n          AND work_date::timestamp <= $__timeTo()\n          AND department IN (${service:sqlstring})\n          AND activity_type IN (${activity:sqlstring})\n          AND employee_name IN (${employee:sqlstring})\n          AND employment_type IS NOT NULL \n          AND EXTRACT(YEAR FROM work_date)::text IN (${year:sqlstring}) \n          AND to_char(work_date, 'IW') IN (${week:sqlstring})\n          AND (\n              ('RW' IN (${ma_kat:sqlstring}) AND employment_type IN ('Full-time', 'Contract'))\n              OR ('Sub' IN (${ma_kat:sqlstring}) AND employment_type IN ('Part-time', 'Freelancer', 'Subcontractor'))\n              OR ('Temp' IN (${ma_kat:sqlstring}) AND employment_type IN ('Temporary', 'Loan'))\n          )\n        GROUP BY 1, 2 ORDER BY 1, 2\n    ",
+          "refId": "A"
+        }
+      ]
+    },
+    {
+      "gridPos": {
+        "h": 15,
+        "w": 9,
+        "x": 15,
+        "y": 9
+      },
+      "title": "Working Hours by Month",
+      "type": "table",
+      "options": {
+        "showHeader": true,
+        "footer": {
+          "show": true,
+          "reducer": [
+            "sum"
+          ],
+          "fields": [
+            "Hours"
+          ]
+        }
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "grafana-postgresql-datasource",
+            "uid": "${DS_POSTGRES}"
+          },
+          "format": "table",
+          "rawSql": "\n        SELECT to_char(work_date, 'Mon') as \"Month\",\n               EXTRACT(YEAR FROM work_date)::text as \"Year\",\n               ROUND(SUM(duration)::numeric, 0) as \"Hours\"\n        FROM work_logs \n        WHERE work_date::timestamp >= $__timeFrom()\n          AND work_date::timestamp <= $__timeTo()\n          AND department IN (${service:sqlstring})\n          AND activity_type IN (${activity:sqlstring})\n          AND employee_name IN (${employee:sqlstring})\n          AND employment_type IS NOT NULL \n          AND EXTRACT(YEAR FROM work_date)::text IN (${year:sqlstring}) \n          AND to_char(work_date, 'IW') IN (${week:sqlstring})\n          AND (\n              ('RW' IN (${ma_kat:sqlstring}) AND employment_type IN ('Full-time', 'Contract'))\n              OR ('Sub' IN (${ma_kat:sqlstring}) AND employment_type IN ('Part-time', 'Freelancer', 'Subcontractor'))\n              OR ('Temp' IN (${ma_kat:sqlstring}) AND employment_type IN ('Temporary', 'Loan'))\n          )\n        GROUP BY 1, EXTRACT(MONTH FROM work_date), 2 ORDER BY EXTRACT(MONTH FROM work_date), 2\n    ",
+          "refId": "A"
+        }
+      ]
+    },
+    {
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 24
+      },
+      "title": "Section 2: Detailed Employee Breakdown",
+      "type": "row"
+    },
+    {
+      "gridPos": {
+        "h": 15,
+        "w": 24,
+        "x": 0,
+        "y": 25
+      },
+      "title": "Detailed Hours by Employee",
+      "type": "table",
+      "targets": [
+        {
+          "datasource": {
+            "type": "grafana-postgresql-datasource",
+            "uid": "${DS_POSTGRES}"
+          },
+          "format": "table",
+          "rawSql": "\n        SELECT employee_name as \"Employee\",\n               TO_CHAR(work_date, 'Mon') as \"Month\",\n               EXTRACT(YEAR FROM work_date)::text as \"Year\",\n               ROUND(SUM(duration)::numeric, 2) as \"Hours\"\n        FROM work_logs \n        WHERE work_date::timestamp >= $__timeFrom()\n          AND work_date::timestamp <= $__timeTo()\n          AND department IN (${service:sqlstring})\n          AND activity_type IN (${activity:sqlstring})\n          AND employee_name IN (${employee:sqlstring})\n          AND employment_type IS NOT NULL \n          AND EXTRACT(YEAR FROM work_date)::text IN (${year:sqlstring}) \n          AND to_char(work_date, 'IW') IN (${week:sqlstring})\n          AND (\n              ('RW' IN (${ma_kat:sqlstring}) AND employment_type IN ('Full-time', 'Contract'))\n              OR ('Sub' IN (${ma_kat:sqlstring}) AND employment_type IN ('Part-time', 'Freelancer', 'Subcontractor'))\n              OR ('Temp' IN (${ma_kat:sqlstring}) AND employment_type IN ('Temporary', 'Loan'))\n          )\n        GROUP BY 1, 2, EXTRACT(MONTH FROM work_date), 3\n        ORDER BY 1, EXTRACT(MONTH FROM work_date), 3\n    ",
+          "refId": "A"
+        }
+      ]
+    }
+  ],
+  "schemaVersion": 38,
+  "style": "dark",
+  "tags": [
+    "admin"
+  ],
+  "templating": {
+    "list": [
+      {
+        "hide": 0,
+        "label": "Datasource",
+        "name": "DS_POSTGRES",
+        "query": "grafana-postgresql-datasource",
+        "refresh": 1,
+        "type": "datasource"
+      },
+      {
+        "datasource": {
+          "type": "grafana-postgresql-datasource",
+          "uid": "${DS_POSTGRES}"
+        },
+        "hide": 0,
+        "includeAll": true,
+        "multi": true,
+        "name": "year",
+        "query": "SELECT DISTINCT EXTRACT(YEAR FROM work_date)::text FROM work_logs ORDER BY 1 DESC",
+        "refresh": 1,
+        "type": "query"
+      },
+      {
+        "datasource": {
+          "type": "grafana-postgresql-datasource",
+          "uid": "${DS_POSTGRES}"
+        },
+        "hide": 0,
+        "includeAll": true,
+        "multi": true,
+        "name": "week",
+        "query": "SELECT DISTINCT to_char(work_date, 'IW') FROM work_logs ORDER BY 1 ASC",
+        "refresh": 1,
+        "type": "query"
+      },
+      {
+        "datasource": {
+          "type": "grafana-postgresql-datasource",
+          "uid": "${DS_POSTGRES}"
+        },
+        "hide": 0,
+        "includeAll": true,
+        "label": "Service",
+        "multi": true,
+        "name": "service",
+        "query": "SELECT DISTINCT department FROM work_logs WHERE department IS NOT NULL ORDER BY department",
+        "refresh": 1,
+        "type": "query"
+      },
+      {
+        "datasource": {
+          "type": "grafana-postgresql-datasource",
+          "uid": "${DS_POSTGRES}"
+        },
+        "hide": 0,
+        "includeAll": true,
+        "label": "Activity",
+        "multi": true,
+        "name": "activity",
+        "query": "SELECT DISTINCT activity_type FROM work_logs WHERE activity_type IS NOT NULL ORDER BY activity_type",
+        "refresh": 1,
+        "type": "query"
+      },
+      {
+        "datasource": {
+          "type": "grafana-postgresql-datasource",
+          "uid": "${DS_POSTGRES}"
+        },
+        "hide": 0,
+        "includeAll": true,
+        "label": "Employee",
+        "multi": true,
+        "name": "employee",
+        "query": "SELECT DISTINCT employee_name FROM work_logs WHERE employee_name IS NOT NULL ORDER BY employee_name",
+        "refresh": 1,
+        "type": "query"
+      },
+      {
+        "hide": 0,
+        "includeAll": true,
+        "multi": true,
+        "name": "ma_kat",
+        "options": [
+          {
+            "text": "RW",
+            "value": "RW"
+          },
+          {
+            "text": "Sub",
+            "value": "Sub"
+          },
+          {
+            "text": "Temp",
+            "value": "Temp"
+          }
+        ],
+        "query": "RW,Sub,Temp",
+        "type": "custom",
+        "current": {
+          "text": "RW + Sub + Temp",
+          "value": [
+            "RW",
+            "Sub",
+            "Temp"
+          ]
+        }
+      }
+    ]
+  },
+  "time": {
+    "from": "now-2y",
+    "to": "now"
+  },
+  "title": "Employees - Analytics & Hours",
+  "uid": "adm-empl-comprehensive",
+  "version": 1
+}

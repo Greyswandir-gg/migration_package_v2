@@ -1,0 +1,22 @@
+apiVersion: 1
+
+providers:
+  - name: 'Admin Dashboards'
+    orgId: 1
+    folder: 'Admin'
+    type: file
+    disableDeletion: false
+    updateIntervalSeconds: 10
+    allowUiUpdates: true
+    options:
+      path: /etc/grafana/provisioning/dashboards/files/admin
+
+  - name: 'User Dashboards'
+    orgId: 1
+    folder: 'Personal'
+    type: file
+    disableDeletion: false
+    updateIntervalSeconds: 10
+    allowUiUpdates: true
+    options:
+      path: /etc/grafana/provisioning/dashboards/files/user

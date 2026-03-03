@@ -1,0 +1,134 @@
+{
+  "editable": true,
+  "fiscalYearStartMonth": 0,
+  "graphTooltip": 0,
+  "id": null,
+  "links": [],
+  "liveNow": false,
+  "panels": [
+    {
+      "datasource": {
+        "type": "grafana-postgresql-datasource",
+        "uid": "${DS_POSTGRES}"
+      },
+      "gridPos": {
+        "h": 18,
+        "w": 24,
+        "x": 0,
+        "y": 0
+      },
+      "id": 1,
+      "options": {
+        "footer": {
+          "fields": "",
+          "reducer": ["sum"],
+          "show": false
+        },
+        "showHeader": true,
+        "sortBy": [
+          {
+            "displayName": "Date",
+            "desc": false
+          }
+        ]
+      },
+      "pluginVersion": "10.0.0",
+      "targets": [
+        {
+          "datasource": {
+            "type": "grafana-postgresql-datasource",
+            "uid": "${DS_POSTGRES}"
+          },
+          "format": "table",
+          "rawSql": "SELECT\n  employee_name AS \"Employee\",\n  TO_CHAR(work_date, 'DD.MM.YYYY') AS \"Date\",\n  ROUND(SUM(duration)::numeric, 2) AS \"total\",\n  ROUND(SUM(duration)::numeric, 2) AS \"net total\"\nFROM work_logs\nWHERE work_date::timestamp >= $__timeFrom()\n  AND work_date::timestamp <= $__timeTo()\n  AND employment_type IN (${empl_type:sqlstring})\n  AND department IN (${service:sqlstring})\n  AND activity_type IN (${activity:sqlstring})\n  AND employee_name IN (${employee:sqlstring})\nGROUP BY employee_name, work_date\nORDER BY work_date, employee_name",
+          "refId": "A"
+        }
+      ],
+      "title": "Working time net",
+      "type": "table"
+    }
+  ],
+  "refresh": "",
+  "schemaVersion": 38,
+  "style": "dark",
+  "tags": ["admin"],
+  "templating": {
+    "list": [
+      {
+        "hide": 0,
+        "label": "Datasource",
+        "name": "DS_POSTGRES",
+        "options": [],
+        "query": "grafana-postgresql-datasource",
+        "refresh": 1,
+        "type": "datasource"
+      },
+      {
+        "datasource": {
+          "type": "grafana-postgresql-datasource",
+          "uid": "${DS_POSTGRES}"
+        },
+        "hide": 0,
+        "includeAll": true,
+        "label": "Empl Type",
+        "multi": true,
+        "name": "empl_type",
+        "query": "SELECT DISTINCT employment_type FROM work_logs WHERE employment_type IS NOT NULL ORDER BY employment_type",
+        "refresh": 1,
+        "type": "query"
+      },
+      {
+        "datasource": {
+          "type": "grafana-postgresql-datasource",
+          "uid": "${DS_POSTGRES}"
+        },
+        "hide": 0,
+        "includeAll": true,
+        "label": "Service",
+        "multi": true,
+        "name": "service",
+        "query": "SELECT DISTINCT department FROM work_logs WHERE department IS NOT NULL ORDER BY department",
+        "refresh": 1,
+        "type": "query"
+      },
+      {
+        "datasource": {
+          "type": "grafana-postgresql-datasource",
+          "uid": "${DS_POSTGRES}"
+        },
+        "hide": 0,
+        "includeAll": true,
+        "label": "Activity",
+        "multi": true,
+        "name": "activity",
+        "query": "SELECT DISTINCT activity_type FROM work_logs WHERE activity_type IS NOT NULL ORDER BY activity_type",
+        "refresh": 1,
+        "type": "query"
+      },
+      {
+        "datasource": {
+          "type": "grafana-postgresql-datasource",
+          "uid": "${DS_POSTGRES}"
+        },
+        "hide": 0,
+        "includeAll": true,
+        "label": "Employee",
+        "multi": true,
+        "name": "employee",
+        "query": "SELECT DISTINCT employee_name FROM work_logs WHERE employee_name IS NOT NULL ORDER BY employee_name",
+        "refresh": 1,
+        "type": "query"
+      }
+    ]
+  },
+  "time": {
+    "from": "now-2y",
+    "to": "now"
+  },
+  "timepicker": {},
+  "timezone": "",
+  "title": "Working time net",
+  "uid": "admin-working-time-net",
+  "version": 1,
+  "weekStart": ""
+}

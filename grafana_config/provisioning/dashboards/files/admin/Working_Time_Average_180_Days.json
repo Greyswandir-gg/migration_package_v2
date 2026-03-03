@@ -1,0 +1,137 @@
+{
+  "editable": true,
+  "fiscalYearStartMonth": 0,
+  "graphTooltip": 0,
+  "id": null,
+  "links": [],
+  "liveNow": false,
+  "panels": [
+    {
+      "datasource": {
+        "type": "grafana-postgresql-datasource",
+        "uid": "${DS_POSTGRES}"
+      },
+      "gridPos": {
+        "h": 16,
+        "w": 24,
+        "x": 0,
+        "y": 0
+      },
+      "id": 1,
+      "options": {
+        "footer": {
+          "fields": "",
+          "reducer": ["sum"],
+          "show": false
+        },
+        "showHeader": true,
+        "sortBy": [
+          {
+            "displayName": "Average per 6 Month",
+            "desc": true
+          }
+        ]
+      },
+      "pluginVersion": "10.0.0",
+      "targets": [
+        {
+          "datasource": {
+            "type": "grafana-postgresql-datasource",
+            "uid": "${DS_POSTGRES}"
+          },
+          "format": "table",
+          "rawSql": "SELECT\n  employee_name AS \"Employee\",\n  department AS \"Service department\",\n  employment_type AS \"Status\",\n  ROUND(SUM(duration)::numeric, 2) AS \"total\",\n  ROUND((SUM(duration) / 6.0)::numeric, 2) AS \"Average per 6 Month\"\nFROM work_logs\nWHERE work_date::timestamp >= $__timeFrom()\n  AND work_date::timestamp <= $__timeTo()\n  AND department IN (${service:sqlstring})\n  AND activity_type IN (${activity:sqlstring})\n  AND employee_name IN (${employee:sqlstring})\n  AND employment_type IS NOT NULL\n  AND (\n    ('RW' IN (${ma_kat:sqlstring}) AND employment_type IN ('Full-time', 'Contract'))\n    OR ('Sub' IN (${ma_kat:sqlstring}) AND employment_type IN ('Part-time', 'Freelancer', 'Subcontractor'))\n    OR ('Temp' IN (${ma_kat:sqlstring}) AND employment_type IN ('Temporary', 'Loan'))\n  )\nGROUP BY employee_name, department, employment_type\nORDER BY \"Average per 6 Month\" DESC",
+          "refId": "A"
+        }
+      ],
+      "title": "working time average - 180 days",
+      "type": "table"
+    }
+  ],
+  "refresh": "",
+  "schemaVersion": 38,
+  "style": "dark",
+  "tags": ["admin"],
+  "templating": {
+    "list": [
+      {
+        "hide": 0,
+        "label": "Datasource",
+        "name": "DS_POSTGRES",
+        "options": [],
+        "query": "grafana-postgresql-datasource",
+        "refresh": 1,
+        "type": "datasource"
+      },
+      {
+        "datasource": {
+          "type": "grafana-postgresql-datasource",
+          "uid": "${DS_POSTGRES}"
+        },
+        "hide": 0,
+        "includeAll": true,
+        "label": "Service",
+        "multi": true,
+        "name": "service",
+        "query": "SELECT DISTINCT department FROM work_logs WHERE department IS NOT NULL ORDER BY department",
+        "refresh": 1,
+        "type": "query"
+      },
+      {
+        "datasource": {
+          "type": "grafana-postgresql-datasource",
+          "uid": "${DS_POSTGRES}"
+        },
+        "hide": 0,
+        "includeAll": true,
+        "label": "Activity",
+        "multi": true,
+        "name": "activity",
+        "query": "SELECT DISTINCT activity_type FROM work_logs WHERE activity_type IS NOT NULL ORDER BY activity_type",
+        "refresh": 1,
+        "type": "query"
+      },
+      {
+        "datasource": {
+          "type": "grafana-postgresql-datasource",
+          "uid": "${DS_POSTGRES}"
+        },
+        "hide": 0,
+        "includeAll": true,
+        "label": "Employee",
+        "multi": true,
+        "name": "employee",
+        "query": "SELECT DISTINCT employee_name FROM work_logs WHERE employee_name IS NOT NULL ORDER BY employee_name",
+        "refresh": 1,
+        "type": "query"
+      },
+      {
+        "hide": 0,
+        "includeAll": true,
+        "multi": true,
+        "name": "ma_kat",
+        "options": [
+          { "text": "RW", "value": "RW" },
+          { "text": "Sub", "value": "Sub" },
+          { "text": "Temp", "value": "Temp" }
+        ],
+        "query": "RW,Sub,Temp",
+        "type": "custom",
+        "current": {
+          "text": "RW + Sub + Temp",
+          "value": ["RW", "Sub", "Temp"]
+        }
+      }
+    ]
+  },
+  "time": {
+    "from": "now-180d",
+    "to": "now"
+  },
+  "timepicker": {},
+  "timezone": "",
+  "title": "Working time average - 180 days",
+  "uid": "admin-working-time-avg-180",
+  "version": 1,
+  "weekStart": ""
+}

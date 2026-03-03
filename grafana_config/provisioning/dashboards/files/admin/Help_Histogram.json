@@ -1,0 +1,130 @@
+{
+  "editable": true,
+  "fiscalYearStartMonth": 0,
+  "graphTooltip": 0,
+  "id": null,
+  "links": [],
+  "liveNow": false,
+  "panels": [
+    {
+      "datasource": {
+        "type": "grafana-postgresql-datasource",
+        "uid": "${DS_POSTGRES}"
+      },
+      "gridPos": {
+        "h": 12,
+        "w": 12,
+        "x": 0,
+        "y": 0
+      },
+      "id": 2,
+      "options": {
+        "showHeader": true,
+        "footer": { "show": false }
+      },
+      "pluginVersion": "10.0.0",
+      "targets": [
+        {
+          "datasource": {
+            "type": "grafana-postgresql-datasource",
+            "uid": "${DS_POSTGRES}"
+          },
+          "format": "table",
+          "rawSql": "SELECT\n  COALESCE(project_number::text, department, 'N/A') AS \"Tour\",\n  ROUND(duration::numeric, 2) AS \"Duration\"\nFROM work_logs\nWHERE work_date::timestamp >= $__timeFrom()\n  AND work_date::timestamp <= $__timeTo()\n  AND duration IS NOT NULL\n  AND department IN (${service:sqlstring})\n  AND activity_type IN (${activity:sqlstring})\n  AND employee_name IN (${employee:sqlstring})\nORDER BY work_date DESC, duration DESC\nLIMIT 1000",
+          "refId": "A"
+        }
+      ],
+      "title": "Tour & Duration",
+      "type": "table"
+    },
+    {
+      "datasource": {
+        "type": "grafana-postgresql-datasource",
+        "uid": "${DS_POSTGRES}"
+      },
+      "gridPos": {
+        "h": 12,
+        "w": 12,
+        "x": 12,
+        "y": 0
+      },
+      "id": 1,
+      "options": {
+        "xField": "Bin",
+        "showValue": "always",
+        "legend": { "displayMode": "list", "placement": "bottom", "showLegend": false }
+      },
+      "pluginVersion": "10.0.0",
+      "targets": [
+        {
+          "datasource": {
+            "type": "grafana-postgresql-datasource",
+            "uid": "${DS_POSTGRES}"
+          },
+          "format": "table",
+          "rawSql": "SELECT\n  bin_label AS \"Bin\",\n  COUNT(*)::bigint AS \"Frequency\"\nFROM (\n  SELECT duration,\n    CASE\n      WHEN duration <= 2 THEN '≤ 2'\n      WHEN duration <= 5.5 THEN '(2, 5.5]'\n      WHEN duration <= 9 THEN '(5.5, 9]'\n      WHEN duration <= 12.5 THEN '(9, 12.5]'\n      WHEN duration <= 16 THEN '(12.5, 16]'\n      WHEN duration <= 19.5 THEN '(16, 19.5]'\n      WHEN duration <= 23 THEN '(19.5, 23]'\n      WHEN duration <= 26.5 THEN '(23, 26.5]'\n      WHEN duration <= 30 THEN '(26.5, 30]'\n      ELSE '> 30'\n    END AS bin_label,\n    CASE\n      WHEN duration <= 2 THEN 1\n      WHEN duration <= 5.5 THEN 2\n      WHEN duration <= 9 THEN 3\n      WHEN duration <= 12.5 THEN 4\n      WHEN duration <= 16 THEN 5\n      WHEN duration <= 19.5 THEN 6\n      WHEN duration <= 23 THEN 7\n      WHEN duration <= 26.5 THEN 8\n      WHEN duration <= 30 THEN 9\n      ELSE 10\n    END AS sort_order\n  FROM work_logs\n  WHERE work_date::timestamp >= $__timeFrom()\n    AND work_date::timestamp <= $__timeTo()\n    AND duration IS NOT NULL\n    AND department IN (${service:sqlstring})\n    AND activity_type IN (${activity:sqlstring})\n    AND employee_name IN (${employee:sqlstring})\n) sub\nGROUP BY bin_label, sort_order\nORDER BY sort_order",
+          "refId": "A"
+        }
+      ],
+      "title": "Duration histogram",
+      "type": "barchart"
+    }
+  ],
+  "refresh": "",
+  "schemaVersion": 38,
+  "style": "dark",
+  "tags": ["admin"],
+  "templating": {
+    "list": [
+      {
+        "hide": 0,
+        "label": "Datasource",
+        "name": "DS_POSTGRES",
+        "options": [],
+        "query": "grafana-postgresql-datasource",
+        "refresh": 1,
+        "type": "datasource"
+      },
+      {
+        "datasource": { "type": "grafana-postgresql-datasource", "uid": "${DS_POSTGRES}" },
+        "hide": 0,
+        "includeAll": true,
+        "label": "Service",
+        "multi": true,
+        "name": "service",
+        "query": "SELECT DISTINCT department FROM work_logs WHERE department IS NOT NULL ORDER BY department",
+        "refresh": 1,
+        "type": "query"
+      },
+      {
+        "datasource": { "type": "grafana-postgresql-datasource", "uid": "${DS_POSTGRES}" },
+        "hide": 0,
+        "includeAll": true,
+        "label": "Activity",
+        "multi": true,
+        "name": "activity",
+        "query": "SELECT DISTINCT activity_type FROM work_logs WHERE activity_type IS NOT NULL ORDER BY activity_type",
+        "refresh": 1,
+        "type": "query"
+      },
+      {
+        "datasource": { "type": "grafana-postgresql-datasource", "uid": "${DS_POSTGRES}" },
+        "hide": 0,
+        "includeAll": true,
+        "label": "Employee",
+        "multi": true,
+        "name": "employee",
+        "query": "SELECT DISTINCT employee_name FROM work_logs WHERE employee_name IS NOT NULL ORDER BY employee_name",
+        "refresh": 1,
+        "type": "query"
+      }
+    ]
+  },
+  "time": { "from": "now-2y", "to": "now" },
+  "timepicker": {},
+  "timezone": "",
+  "title": "Help Histogram",
+  "uid": "admin-help-histogram",
+  "version": 1,
+  "weekStart": ""
+}

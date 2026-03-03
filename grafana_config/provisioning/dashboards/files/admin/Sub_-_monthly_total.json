@@ -1,0 +1,338 @@
+{
+  "annotations": {
+    "list": [
+      {
+        "builtIn": 1,
+        "datasource": {
+          "type": "grafana",
+          "uid": "-- Grafana --"
+        },
+        "enable": true,
+        "hide": true,
+        "iconColor": "rgba(0, 211, 255, 1)",
+        "name": "Annotations & Alerts",
+        "type": "dashboard"
+      }
+    ]
+  },
+  "editable": true,
+  "fiscalYearStartMonth": 0,
+  "graphTooltip": 0,
+  "links": [],
+  "panels": [
+    {
+      "datasource": {
+        "type": "grafana-postgresql-datasource",
+        "uid": "${DS_POSTGRES}"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "custom": {
+            "align": "auto",
+            "cellOptions": {
+              "type": "auto"
+            },
+            "footer": {
+              "reducers": []
+            },
+            "inspect": false
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": 0
+              },
+              {
+                "color": "red",
+                "value": 80
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 14,
+        "w": 24,
+        "x": 0,
+        "y": 0
+      },
+      "id": 1,
+      "options": {
+        "cellHeight": "sm",
+        "showHeader": true
+      },
+      "pluginVersion": "12.4.0",
+      "targets": [
+        {
+          "datasource": {
+            "type": "grafana-postgresql-datasource",
+            "uid": "${DS_POSTGRES}"
+          },
+          "format": "table",
+          "rawSql": "\n            SELECT \n                employee_name as \"Employee\",\n                TO_CHAR(work_date, 'Mon') as \"Month\",\n                ROUND(SUM(CASE WHEN EXTRACT(YEAR FROM work_date) = 2023 THEN duration ELSE 0 END)::numeric, 2) as \"2023\",\n                ROUND(SUM(CASE WHEN EXTRACT(YEAR FROM work_date) = 2024 THEN duration ELSE 0 END)::numeric, 2) as \"2024\",\n                ROUND(SUM(CASE WHEN EXTRACT(YEAR FROM work_date) = 2025 THEN duration ELSE 0 END)::numeric, 2) as \"2025\"\n            FROM work_logs\n            \n    WHERE work_date::timestamp >= $__timeFrom()\n      AND work_date::timestamp <= $__timeTo()\n      AND department IN (${service:sqlstring})\n      AND activity_type IN (${activity:sqlstring})\n      AND employee_name IN (${employee:sqlstring})\n      AND employment_type IS NOT NULL \n      AND EXTRACT(YEAR FROM work_date)::text IN (${year:sqlstring}) \n      AND to_char(work_date, 'IW') IN (${week:sqlstring})\n      AND (\n          ('RW' IN (${ma_kat:sqlstring}) AND employment_type IN ('Full-time', 'Contract'))\n          OR ('Sub' IN (${ma_kat:sqlstring}) AND employment_type IN ('Part-time', 'Freelancer', 'Subcontractor'))\n          OR ('Temp' IN (${ma_kat:sqlstring}) AND employment_type IN ('Temporary', 'Loan'))\n      )\n\n            AND employment_type IN ('Part-time', 'Freelancer', 'Subcontractor')\n            GROUP BY 1, 2, EXTRACT(MONTH FROM work_date)\n            ORDER BY 1, EXTRACT(MONTH FROM work_date)\n        ",
+          "refId": "A"
+        }
+      ],
+      "title": "Subcontractor Hours by Year",
+      "type": "table"
+    },
+    {
+      "datasource": {
+        "type": "grafana-postgresql-datasource",
+        "uid": "${DS_POSTGRES}"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "axisBorderShow": false,
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
+            "axisLabel": "",
+            "axisPlacement": "auto",
+            "fillOpacity": 80,
+            "gradientMode": "none",
+            "hideFrom": {
+              "legend": false,
+              "tooltip": false,
+              "viz": false
+            },
+            "lineWidth": 1,
+            "scaleDistribution": {
+              "type": "linear"
+            },
+            "thresholdsStyle": {
+              "mode": "off"
+            }
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": 0
+              },
+              {
+                "color": "red",
+                "value": 80
+              }
+            ]
+          }
+        },
+        "overrides": [
+          {
+            "__systemRef": "hideSeriesFrom",
+            "matcher": {
+              "id": "byNames",
+              "options": {
+                "mode": "exclude",
+                "names": [
+                  "2024"
+                ],
+                "prefix": "All except:",
+                "readOnly": true
+              }
+            },
+            "properties": [
+              {
+                "id": "custom.hideFrom",
+                "value": {
+                  "legend": false,
+                  "tooltip": true,
+                  "viz": true
+                }
+              }
+            ]
+          }
+        ]
+      },
+      "gridPos": {
+        "h": 10,
+        "w": 24,
+        "x": 0,
+        "y": 14
+      },
+      "id": 2,
+      "options": {
+        "barRadius": 0,
+        "barWidth": 0.97,
+        "fullHighlight": false,
+        "groupWidth": 0.7,
+        "legend": {
+          "calcs": [],
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "orientation": "auto",
+        "showValue": "always",
+        "stacking": "none",
+        "tooltip": {
+          "hideZeros": false,
+          "mode": "single",
+          "sort": "none"
+        },
+        "xField": "Month",
+        "xTickLabelRotation": 0,
+        "xTickLabelSpacing": 0
+      },
+      "pluginVersion": "12.4.0",
+      "targets": [
+        {
+          "datasource": {
+            "type": "grafana-postgresql-datasource",
+            "uid": "${DS_POSTGRES}"
+          },
+          "format": "table",
+          "rawSql": "\n            SELECT \n                TO_CHAR(work_date, 'Mon') as \"Month\",\n                EXTRACT(MONTH FROM work_date) as m_num,\n                ROUND(SUM(CASE WHEN EXTRACT(YEAR FROM work_date) = 2023 THEN duration ELSE 0 END)::numeric, 2) as \"2023\",\n                ROUND(SUM(CASE WHEN EXTRACT(YEAR FROM work_date) = 2024 THEN duration ELSE 0 END)::numeric, 2) as \"2024\",\n                ROUND(SUM(CASE WHEN EXTRACT(YEAR FROM work_date) = 2025 THEN duration ELSE 0 END)::numeric, 2) as \"2025\"\n            FROM work_logs\n            \n    WHERE work_date::timestamp >= $__timeFrom()\n      AND work_date::timestamp <= $__timeTo()\n      AND department IN (${service:sqlstring})\n      AND activity_type IN (${activity:sqlstring})\n      AND employee_name IN (${employee:sqlstring})\n      AND employment_type IS NOT NULL \n      AND EXTRACT(YEAR FROM work_date)::text IN (${year:sqlstring}) \n      AND to_char(work_date, 'IW') IN (${week:sqlstring})\n      AND (\n          ('RW' IN (${ma_kat:sqlstring}) AND employment_type IN ('Full-time', 'Contract'))\n          OR ('Sub' IN (${ma_kat:sqlstring}) AND employment_type IN ('Part-time', 'Freelancer', 'Subcontractor'))\n          OR ('Temp' IN (${ma_kat:sqlstring}) AND employment_type IN ('Temporary', 'Loan'))\n      )\n\n            AND employment_type IN ('Part-time', 'Freelancer', 'Subcontractor')\n            GROUP BY 1, 2\n            ORDER BY 2\n        ",
+          "refId": "A"
+        }
+      ],
+      "title": "Subcontractor Monthly Trend",
+      "type": "barchart"
+    }
+  ],
+  "preload": false,
+  "refresh": "",
+  "schemaVersion": 42,
+  "tags": [
+    "admin"
+  ],
+  "templating": {
+    "list": [
+      {
+        "current": {},
+        "hide": 0,
+        "label": "Datasource",
+        "name": "DS_POSTGRES",
+        "options": [],
+        "query": "grafana-postgresql-datasource",
+        "refresh": 1,
+        "type": "datasource"
+      },
+      {
+        "current": {
+          "text": "All",
+          "value": ["$__all"]
+        },
+        "datasource": {
+          "type": "grafana-postgresql-datasource",
+          "uid": "${DS_POSTGRES}"
+        },
+        "includeAll": true,
+        "multi": true,
+        "name": "year",
+        "options": [],
+        "query": "SELECT DISTINCT EXTRACT(YEAR FROM work_date)::text FROM work_logs ORDER BY 1 DESC",
+        "refresh": 1,
+        "regexApplyTo": "value",
+        "type": "query"
+      },
+      {
+        "current": {
+          "text": "All",
+          "value": ["$__all"]
+        },
+        "datasource": {
+          "type": "grafana-postgresql-datasource",
+          "uid": "${DS_POSTGRES}"
+        },
+        "includeAll": true,
+        "multi": true,
+        "name": "week",
+        "options": [],
+        "query": "SELECT DISTINCT to_char(work_date, 'IW') FROM work_logs ORDER BY 1 ASC",
+        "refresh": 1,
+        "regexApplyTo": "value",
+        "type": "query"
+      },
+      {
+        "current": {
+          "text": "All",
+          "value": ["$__all"]
+        },
+        "datasource": {
+          "type": "grafana-postgresql-datasource",
+          "uid": "${DS_POSTGRES}"
+        },
+        "includeAll": true,
+        "label": "Service",
+        "multi": true,
+        "name": "service",
+        "options": [],
+        "query": "SELECT DISTINCT department FROM work_logs WHERE department IS NOT NULL ORDER BY department",
+        "refresh": 1,
+        "regexApplyTo": "value",
+        "type": "query"
+      },
+      {
+        "current": {
+          "text": "All",
+          "value": ["$__all"]
+        },
+        "datasource": {
+          "type": "grafana-postgresql-datasource",
+          "uid": "${DS_POSTGRES}"
+        },
+        "includeAll": true,
+        "label": "Activity",
+        "multi": true,
+        "name": "activity",
+        "options": [],
+        "query": "SELECT DISTINCT activity_type FROM work_logs WHERE activity_type IS NOT NULL ORDER BY activity_type",
+        "refresh": 1,
+        "regexApplyTo": "value",
+        "type": "query"
+      },
+      {
+        "current": {
+          "text": "All",
+          "value": ["$__all"]
+        },
+        "datasource": {
+          "type": "grafana-postgresql-datasource",
+          "uid": "${DS_POSTGRES}"
+        },
+        "includeAll": true,
+        "label": "Employee",
+        "multi": true,
+        "name": "employee",
+        "options": [],
+        "query": "SELECT DISTINCT employee_name FROM work_logs WHERE employee_name IS NOT NULL ORDER BY employee_name",
+        "refresh": 1,
+        "regexApplyTo": "value",
+        "type": "query"
+      },
+      {
+        "current": {
+          "text": ["RW", "Sub", "Temp"],
+          "value": ["RW", "Sub", "Temp"]
+        },
+        "includeAll": true,
+        "multi": true,
+        "name": "ma_kat",
+        "options": [],
+        "query": "RW,Sub,Temp",
+        "type": "custom",
+        "valuesFormat": "csv"
+      }
+    ]
+  },
+  "time": {
+    "from": "now-2y",
+    "to": "now"
+  },
+  "timepicker": {},
+  "timezone": "browser",
+  "title": "Sub - monthly total",
+  "uid": "adm-sub-monthly",
+  "version": 1,
+  "weekStart": ""
+}

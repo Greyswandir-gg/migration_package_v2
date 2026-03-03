@@ -1,0 +1,15 @@
+[server]
+port = 8501
+address = "0.0.0.0"
+baseUrlPath = "/app"
+maxUploadSize = 200
+maxMessageSize = 200
+enableXsrfProtection = false
+enableCORS = false
+
+[browser]
+gatherUsageStats = false
+
+[runner]
+magicEnabled = false
+fastReruns = true

@@ -1,0 +1,465 @@
+{
+  "annotations": {
+    "list": [
+      {
+        "builtIn": 1,
+        "datasource": {
+          "type": "grafana",
+          "uid": "-- Grafana --"
+        },
+        "enable": true,
+        "hide": true,
+        "iconColor": "rgba(0, 211, 255, 1)",
+        "name": "Annotations & Alerts",
+        "type": "dashboard"
+      }
+    ]
+  },
+  "editable": true,
+  "fiscalYearStartMonth": 0,
+  "graphTooltip": 0,
+  "id": null,
+  "links": [],
+  "panels": [
+    {
+      "collapsed": false,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 0
+      },
+      "id": 103,
+      "panels": [],
+      "title": "Data Tables",
+      "type": "row"
+    },
+    {
+      "datasource": {
+        "type": "grafana-postgresql-datasource",
+        "uid": "efaktabfc78qof"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "custom": {
+            "align": "auto",
+            "cellOptions": {
+              "type": "auto"
+            },
+            "footer": {
+              "reducers": []
+            },
+            "inspect": false
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": 0
+              },
+              {
+                "color": "red",
+                "value": 80
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 12,
+        "w": 12,
+        "x": 0,
+        "y": 1
+      },
+      "id": 7,
+      "options": {
+        "cellHeight": "sm",
+        "showHeader": true
+      },
+      "pluginVersion": "12.3.1",
+      "targets": [
+        {
+          "datasource": {
+            "type": "grafana-postgresql-datasource",
+            "uid": "efaktabfc78qof"
+          },
+          "format": "table",
+          "rawSql": "\n                            SELECT\n                                'Week ' || to_char(work_date, 'IW') as \"Week\",\n                                COUNT(DISTINCT CASE WHEN EXTRACT(YEAR FROM work_date) = 2023 THEN employee_name END) as \"Emp 2023\",\n                                COUNT(DISTINCT CASE WHEN EXTRACT(YEAR FROM work_date) = 2024 THEN employee_name END) as \"Emp 2024\",\n                                COUNT(DISTINCT CASE WHEN EXTRACT(YEAR FROM work_date) = 2025 THEN employee_name END) as \"Emp 2025\",\n                                COUNT(DISTINCT CASE WHEN EXTRACT(YEAR FROM work_date) = 2026 THEN employee_name END) as \"Emp 2026\"\n                            FROM work_logs\n                            WHERE work_date::timestamp >= $__timeFrom()\n                                AND work_date::timestamp <= $__timeTo()\n                                AND department IN (${service:sqlstring})\n                                AND activity_type IN (${activity:sqlstring})\n                                AND employee_name IN (${employee:sqlstring})\n                                AND employment_type IS NOT NULL AND EXTRACT(YEAR FROM work_date)::text IN (${year:sqlstring}) AND to_char(work_date, 'IW') IN (${week:sqlstring})\n                                AND (\n                                    ('RW' IN ($ma_kat) AND employment_type IN ('Full-time', 'Contract'))\n                                    OR ('Sub' IN ($ma_kat) AND employment_type IN ('Part-time', 'Freelancer', 'Subcontractor'))\n                                    OR ('Temp' IN ($ma_kat) AND employment_type IN ('Temporary', 'Loan'))\n                                )\n                            GROUP BY 1\n                            ORDER BY 1\n                        ",
+          "refId": "A"
+        }
+      ],
+      "title": "Employee Count by Week (Table)",
+      "type": "table"
+    },
+    {
+      "datasource": {
+        "type": "grafana-postgresql-datasource",
+        "uid": "efaktabfc78qof"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "custom": {
+            "align": "auto",
+            "cellOptions": {
+              "type": "auto"
+            },
+            "footer": {
+              "reducers": []
+            },
+            "inspect": false
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": 0
+              },
+              {
+                "color": "red",
+                "value": 80
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 12,
+        "w": 12,
+        "x": 12,
+        "y": 1
+      },
+      "id": 8,
+      "options": {
+        "cellHeight": "sm",
+        "showHeader": true
+      },
+      "pluginVersion": "12.3.1",
+      "targets": [
+        {
+          "datasource": {
+            "type": "grafana-postgresql-datasource",
+            "uid": "efaktabfc78qof"
+          },
+          "format": "table",
+          "rawSql": "\n                            SELECT\n                                'Week ' || to_char(work_date, 'IW') as \"Week\",\n                                ROUND(SUM(CASE WHEN EXTRACT(YEAR FROM work_date) = 2023 THEN duration ELSE 0 END)::numeric, 2) as \"Hrs 2023\",\n                                ROUND(SUM(CASE WHEN EXTRACT(YEAR FROM work_date) = 2024 THEN duration ELSE 0 END)::numeric, 2) as \"Hrs 2024\",\n                                ROUND(SUM(CASE WHEN EXTRACT(YEAR FROM work_date) = 2025 THEN duration ELSE 0 END)::numeric, 2) as \"Hrs 2025\",\n                                ROUND(SUM(CASE WHEN EXTRACT(YEAR FROM work_date) = 2026 THEN duration ELSE 0 END)::numeric, 2) as \"Hrs 2026\"\n                            FROM work_logs\n                            WHERE work_date::timestamp >= $__timeFrom()\n                                AND work_date::timestamp <= $__timeTo()\n                                AND department IN (${service:sqlstring})\n                                AND activity_type IN (${activity:sqlstring})\n                                AND employee_name IN (${employee:sqlstring})\n                                AND employment_type IS NOT NULL AND EXTRACT(YEAR FROM work_date)::text IN (${year:sqlstring}) AND to_char(work_date, 'IW') IN (${week:sqlstring})\n                                AND (\n                                    ('RW' IN ($ma_kat) AND employment_type IN ('Full-time', 'Contract'))\n                                    OR ('Sub' IN ($ma_kat) AND employment_type IN ('Part-time', 'Freelancer', 'Subcontractor'))\n                                    OR ('Temp' IN ($ma_kat) AND employment_type IN ('Temporary', 'Loan'))\n                                )\n                            GROUP BY 1\n                            ORDER BY 1\n                        ",
+          "refId": "A"
+        }
+      ],
+      "title": "Working Hours by Week (Table)",
+      "type": "table"
+    },
+    {
+      "datasource": {
+        "type": "grafana-postgresql-datasource",
+        "uid": "efaktabfc78qof"
+      },
+      "fieldConfig": {
+        "defaults": {},
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "month_num"
+            },
+            "properties": [
+              {
+                "id": "custom.hidden",
+                "value": true
+              }
+            ]
+          }
+        ]
+      },
+      "gridPos": {
+        "h": 12,
+        "w": 12,
+        "x": 0,
+        "y": 13
+      },
+      "id": 104,
+      "options": {},
+      "targets": [
+        {
+          "datasource": {
+            "type": "grafana-postgresql-datasource",
+            "uid": "efaktabfc78qof"
+          },
+          "format": "table",
+          "rawSql": "\n                            SELECT\n                                TO_CHAR(work_date, 'Mon') as \"Month\",\n                                EXTRACT(MONTH FROM work_date) as month_num,\n                                COUNT(DISTINCT CASE WHEN EXTRACT(YEAR FROM work_date) = 2023 THEN employee_name END) as \"Emp 2023\",\n                                COUNT(DISTINCT CASE WHEN EXTRACT(YEAR FROM work_date) = 2024 THEN employee_name END) as \"Emp 2024\",\n                                COUNT(DISTINCT CASE WHEN EXTRACT(YEAR FROM work_date) = 2025 THEN employee_name END) as \"Emp 2025\",\n                                COUNT(DISTINCT CASE WHEN EXTRACT(YEAR FROM work_date) = 2026 THEN employee_name END) as \"Emp 2026\"\n                            FROM work_logs\n                            WHERE work_date::timestamp >= $__timeFrom()\n                                AND work_date::timestamp <= $__timeTo()\n                                AND department IN (${service:sqlstring})\n                                AND activity_type IN (${activity:sqlstring})\n                                AND employee_name IN (${employee:sqlstring})\n                                AND employment_type IS NOT NULL AND EXTRACT(YEAR FROM work_date)::text IN (${year:sqlstring}) AND to_char(work_date, 'IW') IN (${week:sqlstring})\n                                AND (\n                                    ('RW' IN ($ma_kat) AND employment_type IN ('Full-time', 'Contract'))\n                                    OR ('Sub' IN ($ma_kat) AND employment_type IN ('Part-time', 'Freelancer', 'Subcontractor'))\n                                    OR ('Temp' IN ($ma_kat) AND employment_type IN ('Temporary', 'Loan'))\n                                )\n                            GROUP BY TO_CHAR(work_date, 'Mon'), EXTRACT(MONTH FROM work_date)\n                            ORDER BY month_num\n                        ",
+          "refId": "A"
+        }
+      ],
+      "title": "Employee Count by Month (Table)",
+      "type": "table"
+    },
+    {
+      "datasource": {
+        "type": "grafana-postgresql-datasource",
+        "uid": "efaktabfc78qof"
+      },
+      "fieldConfig": {
+        "defaults": {},
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "month_num"
+            },
+            "properties": [
+              {
+                "id": "custom.hidden",
+                "value": true
+              }
+            ]
+          }
+        ]
+      },
+      "gridPos": {
+        "h": 12,
+        "w": 12,
+        "x": 12,
+        "y": 13
+      },
+      "id": 9,
+      "options": {},
+      "targets": [
+        {
+          "datasource": {
+            "type": "grafana-postgresql-datasource",
+            "uid": "efaktabfc78qof"
+          },
+          "format": "table",
+          "rawSql": "\n                            SELECT\n                                TO_CHAR(work_date, 'Mon') as \"Month\",\n                                EXTRACT(MONTH FROM work_date) as month_num,\n                                ROUND(SUM(CASE WHEN EXTRACT(YEAR FROM work_date) = 2023 THEN duration ELSE 0 END)::numeric, 2) as \"Hrs 2023\",\n                                ROUND(SUM(CASE WHEN EXTRACT(YEAR FROM work_date) = 2024 THEN duration ELSE 0 END)::numeric, 2) as \"Hrs 2024\",\n                                ROUND(SUM(CASE WHEN EXTRACT(YEAR FROM work_date) = 2025 THEN duration ELSE 0 END)::numeric, 2) as \"Hrs 2025\",\n                                ROUND(SUM(CASE WHEN EXTRACT(YEAR FROM work_date) = 2026 THEN duration ELSE 0 END)::numeric, 2) as \"Hrs 2026\"\n                            FROM work_logs\n                            WHERE work_date::timestamp >= $__timeFrom()\n                                AND work_date::timestamp <= $__timeTo()\n                                AND department IN (${service:sqlstring})\n                                AND activity_type IN (${activity:sqlstring})\n                                AND employee_name IN (${employee:sqlstring})\n                                AND employment_type IS NOT NULL AND EXTRACT(YEAR FROM work_date)::text IN (${year:sqlstring}) AND to_char(work_date, 'IW') IN (${week:sqlstring})\n                                AND (\n                                    ('RW' IN ($ma_kat) AND employment_type IN ('Full-time', 'Contract'))\n                                    OR ('Sub' IN ($ma_kat) AND employment_type IN ('Part-time', 'Freelancer', 'Subcontractor'))\n                                    OR ('Temp' IN ($ma_kat) AND employment_type IN ('Temporary', 'Loan'))\n                                )\n                            GROUP BY TO_CHAR(work_date, 'Mon'), EXTRACT(MONTH FROM work_date)\n                            ORDER BY month_num\n                        ",
+          "refId": "A"
+        }
+      ],
+      "title": "Working Hours by Month (Table)",
+      "type": "table"
+    },
+    {
+      "collapsed": false,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 25
+      },
+      "id": 200,
+      "panels": [],
+      "title": "Raw Data",
+      "type": "row"
+    },
+    {
+      "datasource": {
+        "type": "grafana-postgresql-datasource",
+        "uid": "efaktabfc78qof"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "custom": {
+            "align": "auto",
+            "displayMode": "auto"
+          }
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 20,
+        "w": 24,
+        "x": 0,
+        "y": 26
+      },
+      "id": 1001,
+      "options": {
+        "footer": {
+          "enablePagination": true,
+          "fields": "",
+          "reducer": [
+            "sum"
+          ],
+          "show": false
+        },
+        "showHeader": true
+      },
+      "pluginVersion": "10.0.0",
+      "targets": [
+        {
+          "datasource": {
+            "type": "grafana-postgresql-datasource",
+            "uid": "efaktabfc78qof"
+          },
+          "format": "table",
+          "rawSql": "SELECT * FROM work_logs WHERE work_date::timestamp >= $__timeFrom() AND work_date::timestamp <= $__timeTo() \n AND department IN (${service:sqlstring})\n AND activity_type IN (${activity:sqlstring})\n AND employee_name IN (${employee:sqlstring})\n AND EXTRACT(YEAR FROM work_date)::text IN (${year:sqlstring}) \n AND to_char(work_date, 'IW') IN (${week:sqlstring})",
+          "refId": "A"
+        }
+      ],
+      "title": "Raw Data",
+      "type": "table"
+    }
+  ],
+  "preload": false,
+  "refresh": "5m",
+  "schemaVersion": 42,
+  "tags": [
+    "admin",
+    "employees",
+    "hours"
+  ],
+  "templating": {
+    "list": [
+      {
+        "current": {
+          "text": "All",
+          "value": [
+            "$__all"
+          ]
+        },
+        "datasource": {
+          "type": "grafana-postgresql-datasource",
+          "uid": "efaktabfc78qof"
+        },
+        "includeAll": true,
+        "label": "Year",
+        "multi": true,
+        "name": "year",
+        "options": [],
+        "query": "SELECT DISTINCT EXTRACT(YEAR FROM work_date)::text FROM work_logs ORDER BY 1 DESC",
+        "refresh": 1,
+        "sort": 1,
+        "type": "query"
+      },
+      {
+        "current": {
+          "text": "All",
+          "value": [
+            "$__all"
+          ]
+        },
+        "datasource": {
+          "type": "grafana-postgresql-datasource",
+          "uid": "efaktabfc78qof"
+        },
+        "includeAll": true,
+        "label": "Week",
+        "multi": true,
+        "name": "week",
+        "options": [],
+        "query": "SELECT DISTINCT to_char(work_date, 'IW') FROM work_logs ORDER BY 1 ASC",
+        "refresh": 1,
+        "sort": 1,
+        "type": "query"
+      },
+      {
+        "current": {
+          "text": "All",
+          "value": [
+            "$__all"
+          ]
+        },
+        "datasource": {
+          "type": "grafana-postgresql-datasource",
+          "uid": "efaktabfc78qof"
+        },
+        "includeAll": true,
+        "label": "Department",
+        "multi": true,
+        "name": "service",
+        "options": [],
+        "query": "SELECT DISTINCT department FROM work_logs WHERE department IS NOT NULL ORDER BY department",
+        "refresh": 1,
+        "type": "query"
+      },
+      {
+        "current": {
+          "text": "All",
+          "value": [
+            "$__all"
+          ]
+        },
+        "datasource": {
+          "type": "grafana-postgresql-datasource",
+          "uid": "efaktabfc78qof"
+        },
+        "includeAll": true,
+        "label": "Activity",
+        "multi": true,
+        "name": "activity",
+        "options": [],
+        "query": "SELECT DISTINCT activity_type FROM work_logs WHERE activity_type IS NOT NULL ORDER BY activity_type",
+        "refresh": 1,
+        "type": "query"
+      },
+      {
+        "current": {
+          "text": "All",
+          "value": [
+            "$__all"
+          ]
+        },
+        "datasource": {
+          "type": "grafana-postgresql-datasource",
+          "uid": "efaktabfc78qof"
+        },
+        "includeAll": true,
+        "label": "Employee",
+        "multi": true,
+        "name": "employee",
+        "options": [],
+        "query": "SELECT DISTINCT employee_name FROM work_logs WHERE employee_name IS NOT NULL ORDER BY employee_name",
+        "refresh": 1,
+        "type": "query"
+      },
+      {
+        "current": {
+          "text": [
+            "$__all"
+          ],
+          "value": [
+            "$__all"
+          ]
+        },
+        "includeAll": true,
+        "label": "MA-kat",
+        "multi": true,
+        "name": "ma_kat",
+        "options": [
+          {
+            "selected": false,
+            "text": "RW",
+            "value": "RW"
+          },
+          {
+            "selected": false,
+            "text": "Sub",
+            "value": "Sub"
+          },
+          {
+            "selected": false,
+            "text": "Temp",
+            "value": "Temp"
+          }
+        ],
+        "query": "RW,Sub,Temp",
+        "type": "custom"
+      }
+    ]
+  },
+  "time": {
+    "from": "2023-01-01T00:00:00.000Z",
+    "to": "2026-12-31T23:59:59.999Z"
+  },
+  "timepicker": {},
+  "timezone": "browser",
+  "title": "Admin - Tables",
+  "uid": "admin-tables",
+  "version": 6
+}

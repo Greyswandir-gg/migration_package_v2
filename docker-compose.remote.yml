@@ -1,0 +1,73 @@
+version: '3.8'
+
+services:
+  db:
+    image: postgres:15
+    restart: always
+    environment:
+      POSTGRES_USER: admin
+      POSTGRES_PASSWORD: secretpassword
+      POSTGRES_DB: analytics_db
+    volumes:
+      - ./analytics_db_backup.sql:/docker-entrypoint-initdb.d/01-backup.sql
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - app-network
+    expose:
+      - 5432
+    healthcheck:
+      test: [ "CMD-SHELL", "pg_isready -U admin -d analytics_db" ]
+      interval: 15s
+      timeout: 10s
+      retries: 10
+      start_period: 120s
+
+  web_app:
+    build: ./app
+    restart: always
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      DATABASE_URL: postgresql://admin:secretpassword@db:5432/analytics_db
+    networks:
+      - app-network
+    ports:
+      - "8501:8501"
+
+  grafana:
+    image: grafana/grafana-oss
+    restart: always
+    environment:
+      - GF_SECURITY_ADMIN_PASSWORD=admin
+      - GF_SERVER_ROOT_URL=http://localhost/grafana/
+      - GF_SERVER_SERVE_FROM_SUB_PATH=true
+    volumes:
+      - grafana_data:/var/lib/grafana
+      - ./grafana_config/provisioning:/etc/grafana/provisioning
+    networks:
+      - app-network
+    expose:
+      - 3000
+
+  nginx:
+    image: nginx:latest
+    restart: always
+    ports:
+      - "80:80"
+    volumes:
+      - ./nginx.conf:/etc/nginx/nginx.conf
+    depends_on:
+      - grafana
+      - web_app
+    networks:
+      - app-network
+
+volumes:
+  postgres_data:
+  grafana_data:
+
+
+networks:
+  app-network:
+    driver: bridge

@@ -1,0 +1,120 @@
+{
+  "editable": true,
+  "fiscalYearStartMonth": 0,
+  "graphTooltip": 0,
+  "id": null,
+  "links": [],
+  "liveNow": false,
+  "panels": [
+    {
+      "datasource": {
+        "type": "grafana-postgresql-datasource",
+        "uid": "${DS_POSTGRES}"
+      },
+      "gridPos": {
+        "h": 18,
+        "w": 24,
+        "x": 0,
+        "y": 0
+      },
+      "id": 1,
+      "options": {
+        "footer": { "fields": "", "reducer": ["sum"], "show": false },
+        "showHeader": true,
+        "sortBy": [
+          { "displayName": "MA-Kat", "desc": false },
+          { "displayName": "OffDays", "desc": true }
+        ]
+      },
+      "pluginVersion": "10.0.0",
+      "targets": [
+        {
+          "datasource": {
+            "type": "grafana-postgresql-datasource",
+            "uid": "${DS_POSTGRES}"
+          },
+          "format": "table",
+          "rawSql": "WITH last_per_employee AS (\n  SELECT employee_name, MAX(work_date) AS last_date\n  FROM work_logs\n  WHERE work_date::timestamp >= $__timeFrom()\n    AND work_date::timestamp <= $__timeTo()\n    AND department IN (${service:sqlstring})\n    AND activity_type IN (${activity:sqlstring})\n    AND employee_name IN (${employee:sqlstring})\n    AND employment_type IS NOT NULL\n    AND (\n      ('RW' IN (${ma_kat:sqlstring}) AND employment_type IN ('Full-time', 'Contract'))\n      OR ('Sub' IN (${ma_kat:sqlstring}) AND employment_type IN ('Part-time', 'Freelancer', 'Subcontractor'))\n      OR ('Temp' IN (${ma_kat:sqlstring}) AND employment_type IN ('Temporary', 'Loan'))\n    )\n  GROUP BY employee_name\n),\nlast_row AS (\n  SELECT DISTINCT ON (w.employee_name) w.employee_name, w.work_date, w.employment_type\n  FROM work_logs w\n  JOIN last_per_employee l ON w.employee_name = l.employee_name AND w.work_date = l.last_date\n  WHERE w.department IN (${service:sqlstring})\n    AND w.activity_type IN (${activity:sqlstring})\n    AND (\n      ('RW' IN (${ma_kat:sqlstring}) AND w.employment_type IN ('Full-time', 'Contract'))\n      OR ('Sub' IN (${ma_kat:sqlstring}) AND w.employment_type IN ('Part-time', 'Freelancer', 'Subcontractor'))\n      OR ('Temp' IN (${ma_kat:sqlstring}) AND w.employment_type IN ('Temporary', 'Loan'))\n    )\n  ORDER BY w.employee_name, w.work_date DESC\n)\nSELECT\n  CASE WHEN employment_type IN ('Full-time', 'Contract') THEN 'RW'\n       WHEN employment_type IN ('Part-time', 'Freelancer', 'Subcontractor') THEN 'Sub'\n       WHEN employment_type IN ('Temporary', 'Loan') THEN 'Temp'\n       ELSE COALESCE(employment_type, '') END AS \"MA-Kat\",\n  employee_name AS \"Employee\",\n  TO_CHAR(work_date, 'DD.MM.YYYY') AS \"last transaction\",\n  (CURRENT_DATE - work_date::date)::integer AS \"OffDays\",\n  ROUND(((CURRENT_DATE - work_date::date)::numeric / 30.0), 2) AS \"OffMonth\"\nFROM last_row\nORDER BY \"MA-Kat\", \"OffDays\" DESC",
+          "refId": "A"
+        }
+      ],
+      "title": "Last Booking",
+      "type": "table"
+    }
+  ],
+  "refresh": "",
+  "schemaVersion": 38,
+  "style": "dark",
+  "tags": ["admin"],
+  "templating": {
+    "list": [
+      {
+        "hide": 0,
+        "label": "Datasource",
+        "name": "DS_POSTGRES",
+        "options": [],
+        "query": "grafana-postgresql-datasource",
+        "refresh": 1,
+        "type": "datasource"
+      },
+      {
+        "hide": 0,
+        "includeAll": true,
+        "multi": true,
+        "name": "ma_kat",
+        "label": "MA-Kat",
+        "options": [
+          { "text": "RW", "value": "RW" },
+          { "text": "Sub", "value": "Sub" },
+          { "text": "Temp", "value": "Temp" }
+        ],
+        "query": "RW,Sub,Temp",
+        "type": "custom",
+        "current": {
+          "text": "RW + Sub + Temp",
+          "value": ["RW", "Sub", "Temp"]
+        }
+      },
+      {
+        "datasource": { "type": "grafana-postgresql-datasource", "uid": "${DS_POSTGRES}" },
+        "hide": 0,
+        "includeAll": true,
+        "label": "Bereich",
+        "multi": true,
+        "name": "service",
+        "query": "SELECT DISTINCT department FROM work_logs WHERE department IS NOT NULL ORDER BY department",
+        "refresh": 1,
+        "type": "query"
+      },
+      {
+        "datasource": { "type": "grafana-postgresql-datasource", "uid": "${DS_POSTGRES}" },
+        "hide": 0,
+        "includeAll": true,
+        "label": "Activity",
+        "multi": true,
+        "name": "activity",
+        "query": "SELECT DISTINCT activity_type FROM work_logs WHERE activity_type IS NOT NULL ORDER BY activity_type",
+        "refresh": 1,
+        "type": "query"
+      },
+      {
+        "datasource": { "type": "grafana-postgresql-datasource", "uid": "${DS_POSTGRES}" },
+        "hide": 0,
+        "includeAll": true,
+        "label": "Employee",
+        "multi": true,
+        "name": "employee",
+        "query": "SELECT DISTINCT employee_name FROM work_logs WHERE employee_name IS NOT NULL ORDER BY employee_name",
+        "refresh": 1,
+        "type": "query"
+      }
+    ]
+  },
+  "time": { "from": "now-3y", "to": "now" },
+  "timepicker": {},
+  "timezone": "",
+  "title": "Last Booking",
+  "uid": "admin-last-booking",
+  "version": 1,
+  "weekStart": ""
+}
