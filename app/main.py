@@ -3,6 +3,8 @@ import pandas as pd
 from sqlalchemy import create_engine, text
 import os
 import json
+import re
+from datetime import datetime, timezone
 
 st.set_page_config(page_title="Admin Panel", layout="wide")
 
@@ -11,6 +13,163 @@ engine = create_engine(DB_URL)
 MAPPING_FILE = 'mappings.json'
 
 ADMIN_CREDENTIALS = {"admin": "admin123"}
+
+DEFAULT_IGNORE_SHEETS = {"Sources"}
+TABLE_PREFIX = "xl_"
+
+
+def sanitize_identifier(value):
+    cleaned = re.sub(r"[^a-z0-9_]+", "_", str(value).strip().lower())
+    cleaned = re.sub(r"_+", "_", cleaned).strip("_")
+    if not cleaned:
+        cleaned = "col"
+    if cleaned[0].isdigit():
+        cleaned = f"c_{cleaned}"
+    return cleaned
+
+
+def make_unique_names(values):
+    seen = {}
+    result = []
+    for value in values:
+        base = sanitize_identifier(value)
+        count = seen.get(base, 0)
+        if count:
+            candidate = f"{base}_{count + 1}"
+        else:
+            candidate = base
+        seen[base] = count + 1
+        result.append(candidate)
+    return result
+
+
+def build_table_name(sheet_name):
+    return f"{TABLE_PREFIX}{sanitize_identifier(sheet_name)}"
+
+
+def normalize_dataframe(df):
+    data = df.copy()
+    data = data.dropna(axis=1, how='all')
+    data.columns = make_unique_names(data.columns)
+    return data
+
+
+def parse_ignore_sheets(raw_value):
+    if not raw_value:
+        return set(DEFAULT_IGNORE_SHEETS)
+    return {part.strip() for part in raw_value.split(",") if part.strip()}
+
+
+def load_all_sheets(uploaded_file, ignore_sheets):
+    all_sheets = pd.read_excel(uploaded_file, sheet_name=None, engine='openpyxl')
+    selected = {
+        name: frame for name, frame in all_sheets.items()
+        if name not in ignore_sheets
+    }
+    return all_sheets, selected
+
+
+def drop_existing_xl_tables(conn):
+    existing = conn.execute(text(
+        "SELECT tablename FROM pg_tables "
+        "WHERE schemaname = 'public' AND tablename LIKE :prefix"
+    ), {"prefix": f"{TABLE_PREFIX}%"}).fetchall()
+    dropped = 0
+    for (table_name,) in existing:
+        if re.match(r"^[a-z0-9_]+$", table_name):
+            conn.execute(text(f'DROP TABLE IF EXISTS "{table_name}" CASCADE'))
+            dropped += 1
+    return dropped
+
+
+def ensure_etl_runs_table(conn):
+    conn.execute(text(
+        """
+        CREATE TABLE IF NOT EXISTS etl_import_runs (
+            id BIGSERIAL PRIMARY KEY,
+            started_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+            finished_at TIMESTAMPTZ NULL,
+            status VARCHAR(20) NOT NULL,
+            file_name TEXT NULL,
+            ignore_sheets TEXT NULL,
+            imported_sheet_count INTEGER NOT NULL DEFAULT 0,
+            imported_row_count BIGINT NOT NULL DEFAULT 0,
+            dropped_table_count INTEGER NOT NULL DEFAULT 0,
+            error_message TEXT NULL
+        )
+        """
+    ))
+
+
+def start_import_run(file_name, ignore_sheets):
+    with engine.begin() as conn:
+        ensure_etl_runs_table(conn)
+        row = conn.execute(
+            text(
+                """
+                INSERT INTO etl_import_runs (status, file_name, ignore_sheets)
+                VALUES ('running', :file_name, :ignore_sheets)
+                RETURNING id
+                """
+            ),
+            {"file_name": file_name, "ignore_sheets": ", ".join(sorted(ignore_sheets))}
+        ).fetchone()
+    return row[0]
+
+
+def finish_import_run(run_id, status, imported_sheet_count=0, imported_row_count=0, dropped_table_count=0, error_message=None):
+    with engine.begin() as conn:
+        ensure_etl_runs_table(conn)
+        conn.execute(
+            text(
+                """
+                UPDATE etl_import_runs
+                SET finished_at = :finished_at,
+                    status = :status,
+                    imported_sheet_count = :imported_sheet_count,
+                    imported_row_count = :imported_row_count,
+                    dropped_table_count = :dropped_table_count,
+                    error_message = :error_message
+                WHERE id = :run_id
+                """
+            ),
+            {
+                "finished_at": datetime.now(timezone.utc),
+                "status": status,
+                "imported_sheet_count": int(imported_sheet_count),
+                "imported_row_count": int(imported_row_count),
+                "dropped_table_count": int(dropped_table_count),
+                "error_message": error_message,
+                "run_id": int(run_id),
+            }
+        )
+
+
+def rebuild_work_logs_if_possible(selected_sheets, conn):
+    if 'ProjectTimes' not in selected_sheets:
+        return None
+
+    df = selected_sheets['ProjectTimes'].copy()
+    required_cols = {
+        'Datum': 'work_date',
+        'Dauer': 'duration',
+        'Bereich': 'department',
+        'Projekt-Nr.': 'project_number',
+        'Task_new': 'activity_type',
+        'Mitarbeiter': 'employee_name',
+        'Bemerkung': 'description',
+    }
+    missing = [c for c in required_cols if c not in df.columns]
+    if missing:
+        return {"ok": False, "missing": missing}
+
+    mapping = load_mappings()
+    work = df[list(required_cols.keys())].rename(columns=required_cols)
+    work['owner_login'] = work['employee_name'].map(mapping).fillna('unassigned')
+    work = work[['owner_login', 'work_date', 'duration', 'department', 'project_number',
+                 'activity_type', 'employee_name', 'description']]
+    work.to_sql('work_logs', conn, if_exists='replace', index=False, method='multi', chunksize=1000)
+    return {"ok": True, "rows": len(work)}
 
 def load_mappings():
     if os.path.exists(MAPPING_FILE):
@@ -59,31 +218,45 @@ def main_app():
     with tab1:
         st.header("Upload Excel Report")
         uploaded_file = st.file_uploader("File Evaluation_2023ff.xlsx", type=["xlsx", "xls"])
+        ignore_raw = st.text_input(
+            "Ignore sheets (comma separated)",
+            value=", ".join(sorted(DEFAULT_IGNORE_SHEETS)),
+            help="These sheets are skipped during full refresh load."
+        )
 
         if uploaded_file:
             try:
-                with st.spinner('Reading Excel file...'):
-                    df = pd.read_excel(uploaded_file, sheet_name='ProjectTimes', engine='openpyxl')
+                with st.spinner('Reading all sheets...'):
+                    ignore_sheets = parse_ignore_sheets(ignore_raw)
+                    all_sheets, selected_sheets = load_all_sheets(uploaded_file, ignore_sheets)
 
-                if df.empty:
-                    st.warning("The uploaded file contains no data in 'ProjectTimes' sheet.")
+                if not selected_sheets:
+                    st.warning("No sheets left to import after ignore rules.")
                     st.stop()
 
             except ValueError as e:
-                st.error(f"Sheet 'ProjectTimes' not found in the file. Available sheets might be different. Error: {e}")
+                st.error(f"Failed to read workbook: {e}")
                 st.stop()
             except Exception as e:
                 st.error(f"Error reading file: {e}")
-                st.info("Please ensure the file is a valid Excel file (.xlsx) with a 'ProjectTimes' sheet.")
+                st.info("Please ensure the file is a valid Excel file (.xlsx/.xls).")
                 st.stop()
 
-            st.success(f"✅ File loaded successfully: {len(df)} rows, {len(df.columns)} columns")
+            st.success(f"✅ File loaded successfully: {len(all_sheets)} sheets detected, {len(selected_sheets)} selected for import.")
 
-            with st.expander("📋 View column names"):
-                st.write(list(df.columns))
+            with st.expander("📋 Sheet overview"):
+                preview_rows = []
+                for name, frame in selected_sheets.items():
+                    preview_rows.append({
+                        "Sheet": name,
+                        "Rows": int(frame.shape[0]),
+                        "Columns": int(frame.shape[1]),
+                        "Target table": build_table_name(name)
+                    })
+                st.dataframe(pd.DataFrame(preview_rows), width='stretch')
 
-            if 'Mitarbeiter' in df.columns:
-                unique_names = df['Mitarbeiter'].unique()
+            if 'ProjectTimes' in selected_sheets and 'Mitarbeiter' in selected_sheets['ProjectTimes'].columns:
+                unique_names = selected_sheets['ProjectTimes']['Mitarbeiter'].dropna().unique()
                 unknown_names = [name for name in unique_names if name not in current_mapping]
 
                 if unknown_names:
@@ -91,60 +264,84 @@ def main_app():
                     with st.expander("View unknown employees"):
                         st.write(list(unknown_names))
                     st.info("Go to 'User Settings' tab to add their logins.")
-            else:
-                st.error("Column 'Mitarbeiter' not found in the Excel file!")
 
-            if st.button("🚀 Process and Upload", type="primary"):
+            if st.button("🚀 Full Refresh Upload", type="primary"):
                 progress_bar = st.progress(0)
                 status_text = st.empty()
+                run_id = None
 
                 try:
-                    status_text.text("Step 1/4: Validating columns...")
-                    progress_bar.progress(25)
+                    status_text.text("Step 1/5: Starting import run...")
+                    run_id = start_import_run(uploaded_file.name, ignore_sheets)
+                    progress_bar.progress(10)
 
-                    required_cols = {
-                        'Datum': 'work_date', 'Dauer': 'duration', 'Bereich': 'department',
-                        'Projekt-Nr.': 'project_number', 'Task_new': 'activity_type',
-                        'Mitarbeiter': 'employee_name', 'Bemerkung': 'description'
-                    }
+                    status_text.text("Step 2/5: Full refresh in transaction...")
+                    imported = []
+                    dropped_count = 0
+                    total_rows = 0
+                    with engine.begin() as conn:
+                        dropped_count = drop_existing_xl_tables(conn)
+                        total = len(selected_sheets)
+                        for idx, (sheet_name, frame) in enumerate(selected_sheets.items(), start=1):
+                            table_name = build_table_name(sheet_name)
+                            normalized = normalize_dataframe(frame)
+                            normalized.to_sql(
+                                table_name,
+                                conn,
+                                if_exists='replace',
+                                index=False,
+                                method='multi',
+                                chunksize=1000
+                            )
+                            row_count = int(len(normalized))
+                            total_rows += row_count
+                            imported.append((sheet_name, table_name, row_count))
+                            progress_bar.progress(10 + int((idx / max(total, 1)) * 70))
 
-                    missing_cols = [col for col in required_cols.keys() if col not in df.columns]
-                    if missing_cols:
-                        st.error(f"Missing required columns: {', '.join(missing_cols)}")
-                        st.stop()
+                        status_text.text("Step 3/5: Rebuilding legacy work_logs...")
+                        legacy_result = rebuild_work_logs_if_possible(selected_sheets, conn)
+                    progress_bar.progress(85)
 
-                    df_clean = df[list(required_cols.keys())].rename(columns=required_cols)
+                    status_text.text("Step 4/5: Writing import log...")
+                    finish_import_run(
+                        run_id=run_id,
+                        status="success",
+                        imported_sheet_count=len(imported),
+                        imported_row_count=total_rows,
+                        dropped_table_count=dropped_count
+                    )
+                    progress_bar.progress(95)
 
-                    status_text.text("Step 2/4: Mapping employee names...")
-                    progress_bar.progress(50)
-                    df_clean['owner_login'] = df_clean['employee_name'].map(current_mapping).fillna('unassigned')
-
-                    status_text.text("Step 3/4: Clearing old data for this period...")
-                    progress_bar.progress(75)
-                    min_d, max_d = df_clean['work_date'].min(), df_clean['work_date'].max()
-
-                    with engine.connect() as conn:
-                        result = conn.execute(text(f"DELETE FROM work_logs WHERE work_date >= '{min_d}' AND work_date <= '{max_d}'"))
-                        conn.commit()
-                        deleted_rows = result.rowcount
-                        st.info(f"Deleted {deleted_rows} old records for period {min_d} to {max_d}")
-
-                    status_text.text(f"Step 4/4: Uploading {len(df_clean)} records...")
-                    progress_bar.progress(90)
-
-                    chunk_size = 1000
-                    for i in range(0, len(df_clean), chunk_size):
-                        chunk = df_clean.iloc[i:i+chunk_size]
-                        chunk.to_sql('work_logs', engine, if_exists='append', index=False)
-
+                    status_text.text("Step 5/5: Finalizing...")
                     progress_bar.progress(100)
-                    status_text.text("Complete!")
 
-                    st.success(f"✅ Successfully uploaded {len(df_clean)} records!")
+                    st.success(
+                        f"✅ Full refresh complete (run #{run_id}). "
+                        f"Imported {len(imported)} sheet(s), {total_rows} row(s), dropped {dropped_count} old table(s)."
+                    )
+
+                    st.dataframe(
+                        pd.DataFrame(imported, columns=['Sheet', 'Table', 'Rows']),
+                        width='stretch'
+                    )
+
+                    if legacy_result is None:
+                        st.info("ProjectTimes not found. Legacy table `work_logs` was not rebuilt.")
+                    elif legacy_result.get("ok"):
+                        st.info(f"Legacy table `work_logs` rebuilt: {legacy_result['rows']} rows.")
+                    else:
+                        st.warning(
+                            "Legacy table `work_logs` not rebuilt. Missing columns in ProjectTimes: "
+                            + ", ".join(legacy_result.get("missing", []))
+                        )
+
                     st.balloons()
 
                 except Exception as e:
+                    if run_id is not None:
+                        finish_import_run(run_id=run_id, status="failed", error_message=str(e))
                     st.error(f"Error during upload: {e}")
+                    st.info("All data changes from this run were rolled back.")
                     import traceback
                     with st.expander("View error details"):
                         st.code(traceback.format_exc())
