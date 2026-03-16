@@ -102,7 +102,7 @@
       },
       "gridPos": {
         "h": 4,
-        "w": 8,
+        "w": 12,
         "x": 0,
         "y": 4
       },
@@ -165,71 +165,8 @@
       },
       "gridPos": {
         "h": 4,
-        "w": 8,
-        "x": 8,
-        "y": 4
-      },
-      "id": 5,
-      "options": {
-        "colorMode": "value",
-        "graphMode": "area",
-        "justifyMode": "auto",
-        "orientation": "auto",
-        "percentChangeColorMode": "standard",
-        "reduceOptions": {
-          "calcs": [
-            "lastNotNull"
-          ],
-          "fields": "",
-          "values": false
-        },
-        "showPercentChange": false,
-        "textMode": "auto",
-        "wideLayout": true
-      },
-      "pluginVersion": "12.3.1",
-      "targets": [
-        {
-          "datasource": {
-            "type": "grafana-postgresql-datasource",
-            "uid": "${DS_POSTGRES}"
-          },
-          "format": "table",
-          "rawSql": "\n                            SELECT COUNT(DISTINCT employee_name) as total\n                            FROM work_logs\n                            WHERE work_date::timestamp >= $__timeFrom()\n                                AND work_date::timestamp <= $__timeTo()\n                                AND department IN (${service:sqlstring})\n                                AND activity_type IN (${activity:sqlstring})\n                                AND owner_login = '${__user.login}'\n                                AND employment_type IS NOT NULL AND EXTRACT(YEAR FROM work_date)::text IN (${year:sqlstring}) AND to_char(work_date, 'IW') IN (${week:sqlstring})\n                                AND (\n                                    ('RW' IN (${ma_kat:sqlstring}) AND employment_type IN ('Full-time', 'Contract'))\n                                    OR ('Sub' IN (${ma_kat:sqlstring}) AND employment_type IN ('Part-time', 'Freelancer', 'Subcontractor'))\n                                    OR ('Temp' IN (${ma_kat:sqlstring}) AND employment_type IN ('Temporary', 'Loan'))\n                                )\n                                AND employee_name IS NOT NULL\n                        ",
-          "refId": "A"
-        }
-      ],
-      "title": "Total Employees",
-      "type": "stat"
-    },
-    {
-      "datasource": {
-        "type": "grafana-postgresql-datasource",
-        "uid": "${DS_POSTGRES}"
-      },
-      "fieldConfig": {
-        "defaults": {
-          "mappings": [],
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              {
-                "color": "green",
-                "value": 0
-              },
-              {
-                "color": "red",
-                "value": 80
-              }
-            ]
-          }
-        },
-        "overrides": []
-      },
-      "gridPos": {
-        "h": 4,
-        "w": 8,
-        "x": 16,
+        "w": 12,
+        "x": 12,
         "y": 4
       },
       "id": 6,
@@ -991,9 +928,10 @@
         "multi": true,
         "name": "service",
         "options": [],
-        "query": "SELECT DISTINCT department FROM work_logs WHERE department IS NOT NULL ORDER BY department",
+        "query": "SELECT DISTINCT department FROM work_logs WHERE department IS NOT NULL AND owner_login IN ('${__user.login}', split_part('${__user.email}', '@', 1), replace('${__user.login}', '-', '.'), replace(split_part('${__user.email}', '@', 1), '-', '.')) ORDER BY department",
         "refresh": 1,
-        "type": "query"
+        "type": "query",
+        "hide": 2
       },
       {
         "current": {

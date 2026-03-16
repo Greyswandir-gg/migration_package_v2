@@ -2,7 +2,7 @@
   "editable": true,
   "fiscalYearStartMonth": 0,
   "graphTooltip": 0,
-  "id": null,
+  "id": 2926779563999232,
   "links": [],
   "liveNow": false,
   "panels": [
@@ -10,6 +10,14 @@
       "datasource": {
         "type": "grafana-postgresql-datasource",
         "uid": "${DS_POSTGRES}"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "custom": {
+            "align": "center"
+          }
+        },
+        "overrides": []
       },
       "gridPos": {
         "h": 18,
@@ -19,9 +27,16 @@
       },
       "id": 1,
       "options": {
+        "footer": {
+          "show": false
+        },
         "showHeader": true,
-        "footer": { "show": false },
-        "sortBy": [{ "displayName": "Nachname", "desc": false }]
+        "sortBy": [
+          {
+            "desc": false,
+            "displayName": "Last Name"
+          }
+        ]
       },
       "pluginVersion": "10.0.0",
       "targets": [
@@ -31,7 +46,7 @@
             "uid": "${DS_POSTGRES}"
           },
           "format": "table",
-          "rawSql": "SELECT\n  owner_login AS \"Benutzername\",\n  CASE WHEN POSITION(',' IN COALESCE(employee_name, '')) > 0 THEN TRIM(SPLIT_PART(employee_name, ',', 2)) ELSE TRIM(SPLIT_PART(employee_name || ' ', ' ', 1)) END AS \"Vorname\",\n  CASE WHEN POSITION(',' IN COALESCE(employee_name, '')) > 0 THEN TRIM(SPLIT_PART(employee_name, ',', 1)) ELSE TRIM(COALESCE(SUBSTRING(employee_name FROM POSITION(' ' IN employee_name) + 1), employee_name)) END AS \"Nachname\",\n  employee_name AS \"Name\",\n  UPPER(SUBSTRING(COALESCE(owner_login, '') FROM 1 FOR 4)) AS \"Kurzzeichen\",\n  department AS \"Dept\",\n  CASE\n    WHEN employment_type IN ('Full-time', 'Contract') THEN 'RW'\n    WHEN employment_type IN ('Part-time', 'Freelancer', 'Subcontractor') THEN 'Sub'\n    WHEN employment_type IN ('Temporary', 'Loan') THEN 'Temp'\n    ELSE COALESCE(employment_type, '')\n  END AS \"Status\"\nFROM (\n  SELECT DISTINCT ON (employee_name)\n    owner_login,\n    employee_name,\n    department,\n    employment_type\n  FROM work_logs\n  WHERE employee_name IS NOT NULL AND employee_name != ''\n    AND employment_type IS NOT NULL\n    AND (\n      ('RW' IN (${ma_kat:sqlstring}) AND employment_type IN ('Full-time', 'Contract'))\n      OR ('Sub' IN (${ma_kat:sqlstring}) AND employment_type IN ('Part-time', 'Freelancer', 'Subcontractor'))\n      OR ('Temp' IN (${ma_kat:sqlstring}) AND employment_type IN ('Temporary', 'Loan'))\n    )\n  ORDER BY employee_name, work_date DESC\n) emp\nORDER BY \"Nachname\", \"Vorname\"",
+          "rawSql": "SELECT\n  owner_login AS \"Username\",\n  CASE WHEN POSITION(',' IN COALESCE(employee_name, '')) > 0 THEN TRIM(SPLIT_PART(employee_name, ',', 2)) ELSE TRIM(SPLIT_PART(employee_name || ' ', ' ', 1)) END AS \"First Name\",\n  CASE WHEN POSITION(',' IN COALESCE(employee_name, '')) > 0 THEN TRIM(SPLIT_PART(employee_name, ',', 1)) ELSE TRIM(COALESCE(SUBSTRING(employee_name FROM POSITION(' ' IN employee_name) + 1), employee_name)) END AS \"Last Name\",\n  employee_name AS \"Full Name\",\n  UPPER(SUBSTRING(COALESCE(owner_login, '') FROM 1 FOR 4)) AS \"Initials\",\n  department AS \"Department\",\n  CASE\n    WHEN employment_type IN ('Full-time', 'Contract') THEN 'RW'\n    WHEN employment_type IN ('Part-time', 'Freelancer', 'Subcontractor') THEN 'Sub'\n    WHEN employment_type IN ('Temporary', 'Loan') THEN 'Temp'\n    ELSE COALESCE(employment_type, '')\n  END AS \"Status\"\nFROM (\n  SELECT DISTINCT ON (employee_name)\n    owner_login,\n    employee_name,\n    department,\n    employment_type\n  FROM work_logs\n  WHERE employee_name IS NOT NULL AND employee_name != ''\n    AND employment_type IS NOT NULL\n    AND work_date::timestamp >= $__timeFrom()\n    AND work_date::timestamp <= $__timeTo()\n    AND department IN (${service:sqlstring})\n    AND activity_type IN (${activity:sqlstring})\n    AND (\n      ('RW' IN (${ma_kat:sqlstring}) AND employment_type IN ('Full-time', 'Contract'))\n      OR ('Sub' IN (${ma_kat:sqlstring}) AND employment_type IN ('Part-time', 'Freelancer', 'Subcontractor'))\n      OR ('Temp' IN (${ma_kat:sqlstring}) AND employment_type IN ('Temporary', 'Loan'))\n    )\n  ORDER BY employee_name, work_date DESC\n) emp\nORDER BY \"Last Name\", \"First Name\"",
           "refId": "A"
         }
       ],
@@ -42,7 +57,9 @@
   "refresh": "",
   "schemaVersion": 38,
   "style": "dark",
-  "tags": ["admin"],
+  "tags": [
+    "admin"
+  ],
   "templating": {
     "list": [
       {
@@ -55,25 +72,48 @@
         "type": "datasource"
       },
       {
+        "current": {
+          "selected": true,
+          "text": "RW, Sub, Temp",
+          "value": [
+            "RW",
+            "Sub",
+            "Temp"
+          ]
+        },
         "hide": 0,
         "includeAll": false,
-        "label": "MA-Kat",
+        "label": "Employment Category",
         "multi": true,
         "name": "ma_kat",
         "options": [
-          { "selected": true, "text": "RW", "value": "RW" },
-          { "selected": true, "text": "Sub", "value": "Sub" },
-          { "selected": true, "text": "Temp", "value": "Temp" }
+          {
+            "selected": true,
+            "text": "RW",
+            "value": "RW"
+          },
+          {
+            "selected": true,
+            "text": "Sub",
+            "value": "Sub"
+          },
+          {
+            "selected": true,
+            "text": "Temp",
+            "value": "Temp"
+          }
         ],
         "query": "RW,Sub,Temp",
-        "type": "custom",
-        "current": { "selected": true, "text": "RW, Sub, Temp", "value": ["RW", "Sub", "Temp"] }
+        "type": "custom"
       },
       {
-        "datasource": { "type": "grafana-postgresql-datasource", "uid": "${DS_POSTGRES}" },
+        "datasource": {
+          "type": "grafana-postgresql-datasource",
+          "uid": "${DS_POSTGRES}"
+        },
         "hide": 0,
         "includeAll": true,
-        "label": "Dept",
+        "label": "Department",
         "multi": true,
         "name": "service",
         "query": "SELECT DISTINCT department FROM work_logs WHERE department IS NOT NULL ORDER BY department",
@@ -81,7 +121,10 @@
         "type": "query"
       },
       {
-        "datasource": { "type": "grafana-postgresql-datasource", "uid": "${DS_POSTGRES}" },
+        "datasource": {
+          "type": "grafana-postgresql-datasource",
+          "uid": "${DS_POSTGRES}"
+        },
         "hide": 0,
         "includeAll": true,
         "label": "Activity",
@@ -93,11 +136,14 @@
       }
     ]
   },
-  "time": { "from": "now-3y", "to": "now" },
+  "time": {
+    "from": "now-3y",
+    "to": "now"
+  },
   "timepicker": {},
   "timezone": "",
   "title": "Emp",
   "uid": "admin-emp",
-  "version": 1,
+  "version": 8,
   "weekStart": ""
 }

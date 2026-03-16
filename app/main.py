@@ -4,6 +4,7 @@ from sqlalchemy import create_engine, text
 import os
 import json
 import re
+import unicodedata
 from datetime import datetime, timezone
 
 st.set_page_config(page_title="Admin Panel", layout="wide")
@@ -16,6 +17,7 @@ ADMIN_CREDENTIALS = {"admin": "admin123"}
 
 DEFAULT_IGNORE_SHEETS = {"Sources"}
 TABLE_PREFIX = "xl_"
+PRIMARY_IMPORT_SHEET = "ProjectTimes"
 
 
 def sanitize_identifier(value):
@@ -28,6 +30,32 @@ def sanitize_identifier(value):
     return cleaned
 
 
+def sanitize_login_part(value):
+    raw = str(value or "").strip().lower()
+    # Normalize diacritics (e.g. "Mészáros" -> "meszaros")
+    raw = unicodedata.normalize("NFKD", raw).encode("ascii", "ignore").decode("ascii")
+    raw = re.sub(r"[^a-z0-9]+", ".", raw)
+    raw = re.sub(r"[.]+", ".", raw).strip(".")
+    return raw
+
+
+def derive_login_from_employee_name(employee_name):
+    name = str(employee_name or "").strip()
+    if not name:
+        return "unassigned"
+
+    if "," in name:
+        last = sanitize_login_part(name.split(",", 1)[0])
+        first = sanitize_login_part(name.split(",", 1)[1])
+        candidate = ".".join([part for part in (last, first) if part])
+        return candidate or "unassigned"
+
+    parts = [sanitize_login_part(p) for p in name.split() if sanitize_login_part(p)]
+    if len(parts) >= 2:
+        return f"{parts[0]}.{parts[1]}"
+    if len(parts) == 1:
+        return parts[0]
+    return "unassigned"
 def make_unique_names(values):
     seen = {}
     result = []
@@ -69,13 +97,16 @@ def load_all_sheets(uploaded_file, ignore_sheets):
     return all_sheets, selected
 
 
-def drop_existing_xl_tables(conn):
+def drop_existing_xl_tables(conn, only_tables=None):
     existing = conn.execute(text(
         "SELECT tablename FROM pg_tables "
         "WHERE schemaname = 'public' AND tablename LIKE :prefix"
     ), {"prefix": f"{TABLE_PREFIX}%"}).fetchall()
+    only_tables = {t for t in (only_tables or [])}
     dropped = 0
     for (table_name,) in existing:
+        if only_tables and table_name not in only_tables:
+            continue
         if re.match(r"^[a-z0-9_]+$", table_name):
             conn.execute(text(f'DROP TABLE IF EXISTS "{table_name}" CASCADE'))
             dropped += 1
@@ -150,24 +181,57 @@ def rebuild_work_logs_if_possible(selected_sheets, conn):
         return None
 
     df = selected_sheets['ProjectTimes'].copy()
-    required_cols = {
-        'Datum': 'work_date',
-        'Dauer': 'duration',
-        'Bereich': 'department',
-        'Projekt-Nr.': 'project_number',
-        'Task_new': 'activity_type',
-        'Mitarbeiter': 'employee_name',
-        'Bemerkung': 'description',
+
+    # Support new Evaluation_* files where some source headers may vary by export.
+    source_candidates = {
+        'work_date': ['Datum'],
+        'duration': ['Dauer'],
+        'department': ['Bereich', 'Abteilung'],
+        'project_number': ['Projekt-Nr.'],
+        'activity_type': ['Task_new', 'Tätigkeit'],
+        'employee_name': ['Mitarbeiter'],
+        'description': ['Bemerkung'],
     }
-    missing = [c for c in required_cols if c not in df.columns]
-    if missing:
-        return {"ok": False, "missing": missing}
+    picked = {}
+    missing_targets = []
+    for target, candidates in source_candidates.items():
+        source_name = next((name for name in candidates if name in df.columns), None)
+        if source_name is None:
+            missing_targets.append(target)
+        else:
+            picked[target] = source_name
+    if missing_targets:
+        return {"ok": False, "missing": missing_targets}
 
     mapping = load_mappings()
-    work = df[list(required_cols.keys())].rename(columns=required_cols)
-    work['owner_login'] = work['employee_name'].map(mapping).fillna('unassigned')
+    selected_source_cols = [picked[key] for key in source_candidates.keys()]
+    rename_map = {picked[key]: key for key in source_candidates.keys()}
+    work = df[selected_source_cols].rename(columns=rename_map)
+    mapped = work['employee_name'].map(mapping)
+    fallback = work['employee_name'].apply(derive_login_from_employee_name)
+    work['owner_login'] = mapped.fillna(fallback).fillna('unassigned')
+    work['owner_login'] = work['owner_login'].astype(str).str.strip().replace("", "unassigned")
+
+    # Keep existing Grafana filters functional after full refresh uploads.
+    if 'employment_type' in df.columns:
+        work['employment_type'] = df['employment_type']
+    elif 'MA-Kat' in df.columns:
+        work['employment_type'] = df['MA-Kat'].map({
+            'RW': 'Full-time',
+            'Sub': 'Part-time',
+            'Temp': 'Temporary',
+        }).fillna('Full-time')
+    elif 'Mitarbeiter Kategorien' in df.columns:
+        work['employment_type'] = df['Mitarbeiter Kategorien'].map({
+            'RW': 'Full-time',
+            'Sub': 'Part-time',
+            'Temp': 'Temporary',
+        }).fillna('Full-time')
+    else:
+        work['employment_type'] = 'Full-time'
+
     work = work[['owner_login', 'work_date', 'duration', 'department', 'project_number',
-                 'activity_type', 'employee_name', 'description']]
+                 'activity_type', 'employee_name', 'description', 'employment_type']]
     work.to_sql('work_logs', conn, if_exists='replace', index=False, method='multi', chunksize=1000)
     return {"ok": True, "rows": len(work)}
 
@@ -229,6 +293,11 @@ def main_app():
                 with st.spinner('Reading all sheets...'):
                     ignore_sheets = parse_ignore_sheets(ignore_raw)
                     all_sheets, selected_sheets = load_all_sheets(uploaded_file, ignore_sheets)
+                    if PRIMARY_IMPORT_SHEET not in all_sheets:
+                        st.error(f"Sheet `{PRIMARY_IMPORT_SHEET}` not found in uploaded file.")
+                        st.stop()
+                    # Current business requirement: ingest only ProjectTimes.
+                    selected_sheets = {PRIMARY_IMPORT_SHEET: all_sheets[PRIMARY_IMPORT_SHEET]}
 
                 if not selected_sheets:
                     st.warning("No sheets left to import after ignore rules.")
@@ -242,7 +311,10 @@ def main_app():
                 st.info("Please ensure the file is a valid Excel file (.xlsx/.xls).")
                 st.stop()
 
-            st.success(f"✅ File loaded successfully: {len(all_sheets)} sheets detected, {len(selected_sheets)} selected for import.")
+            st.success(
+                f"✅ File loaded successfully: {len(all_sheets)} sheets detected, "
+                f"{len(selected_sheets)} selected for import ({PRIMARY_IMPORT_SHEET} only)."
+            )
 
             with st.expander("📋 Sheet overview"):
                 preview_rows = []
@@ -280,7 +352,8 @@ def main_app():
                     dropped_count = 0
                     total_rows = 0
                     with engine.begin() as conn:
-                        dropped_count = drop_existing_xl_tables(conn)
+                        target_tables = [build_table_name(name) for name in selected_sheets.keys()]
+                        dropped_count = drop_existing_xl_tables(conn, only_tables=target_tables)
                         total = len(selected_sheets)
                         for idx, (sheet_name, frame) in enumerate(selected_sheets.items(), start=1):
                             table_name = build_table_name(sheet_name)
@@ -377,7 +450,10 @@ def main_app():
             date_to_del = st.date_input("Delete data for date:")
             if st.button("🗑️ Delete for selected day"):
                 with engine.connect() as conn:
-                    conn.execute(text(f"DELETE FROM work_logs WHERE work_date = '{date_to_del}'"))
+                    conn.execute(
+                        text("DELETE FROM work_logs WHERE work_date::date = :target_date"),
+                        {"target_date": date_to_del}
+                    )
                     conn.commit()
                 st.warning(f"Data for {date_to_del} deleted.")
                 st.rerun()
