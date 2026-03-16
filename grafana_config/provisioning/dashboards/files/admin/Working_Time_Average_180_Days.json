@@ -2,7 +2,7 @@
   "editable": true,
   "fiscalYearStartMonth": 0,
   "graphTooltip": 0,
-  "id": null,
+  "id": 2926779958263808,
   "links": [],
   "liveNow": false,
   "panels": [
@@ -10,6 +10,13 @@
       "datasource": {
         "type": "grafana-postgresql-datasource",
         "uid": "${DS_POSTGRES}"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "custom": {
+            "align": "center"
+          }
+        }
       },
       "gridPos": {
         "h": 16,
@@ -21,14 +28,16 @@
       "options": {
         "footer": {
           "fields": "",
-          "reducer": ["sum"],
+          "reducer": [
+            "sum"
+          ],
           "show": false
         },
         "showHeader": true,
         "sortBy": [
           {
-            "displayName": "Average per 6 Month",
-            "desc": true
+            "desc": true,
+            "displayName": "Average per 6 Month"
           }
         ]
       },
@@ -40,7 +49,7 @@
             "uid": "${DS_POSTGRES}"
           },
           "format": "table",
-          "rawSql": "SELECT\n  employee_name AS \"Employee\",\n  department AS \"Service department\",\n  employment_type AS \"Status\",\n  ROUND(SUM(duration)::numeric, 2) AS \"total\",\n  ROUND((SUM(duration) / 6.0)::numeric, 2) AS \"Average per 6 Month\"\nFROM work_logs\nWHERE work_date::timestamp >= $__timeFrom()\n  AND work_date::timestamp <= $__timeTo()\n  AND department IN (${service:sqlstring})\n  AND activity_type IN (${activity:sqlstring})\n  AND employee_name IN (${employee:sqlstring})\n  AND employment_type IS NOT NULL\n  AND (\n    ('RW' IN (${ma_kat:sqlstring}) AND employment_type IN ('Full-time', 'Contract'))\n    OR ('Sub' IN (${ma_kat:sqlstring}) AND employment_type IN ('Part-time', 'Freelancer', 'Subcontractor'))\n    OR ('Temp' IN (${ma_kat:sqlstring}) AND employment_type IN ('Temporary', 'Loan'))\n  )\nGROUP BY employee_name, department, employment_type\nORDER BY \"Average per 6 Month\" DESC",
+          "rawSql": "SELECT\n  mitarbeiter AS \"Employee\",\n  bereich_neu AS \"Service bereich_neu\",\n  ma_kat AS \"Status\",\n  ROUND(SUM(dauer)::numeric, 2) AS \"total\",\n  ROUND((SUM(dauer) / 6.0)::numeric, 2) AS \"Average per 6 Month\"\nFROM xl_projecttimes\nWHERE datum::timestamp >= $__timeFrom()\n  AND datum::timestamp <= $__timeTo()\n  AND ('${service:raw}' = '$__all' OR bereich_neu IN (${service:sqlstring}))\n  AND ('${activity:raw}' = '$__all' OR task_new IN (${activity:sqlstring}))\n  AND ('${employee:raw}' = '$__all' OR mitarbeiter IN (${employee:sqlstring}))\n  AND ma_kat IS NOT NULL\n  AND ('${ma_kat:raw}' = '$__all' OR ma_kat IN (${ma_kat:sqlstring}))\nGROUP BY mitarbeiter, bereich_neu, ma_kat\nORDER BY \"Average per 6 Month\" DESC",
           "refId": "A"
         }
       ],
@@ -51,7 +60,9 @@
   "refresh": "",
   "schemaVersion": 38,
   "style": "dark",
-  "tags": ["admin"],
+  "tags": [
+    "admin"
+  ],
   "templating": {
     "list": [
       {
@@ -73,7 +84,7 @@
         "label": "Service",
         "multi": true,
         "name": "service",
-        "query": "SELECT DISTINCT department FROM work_logs WHERE department IS NOT NULL ORDER BY department",
+        "query": "SELECT DISTINCT bereich_neu FROM xl_projecttimes WHERE bereich_neu IS NOT NULL ORDER BY bereich_neu",
         "refresh": 1,
         "type": "query"
       },
@@ -87,7 +98,7 @@
         "label": "Activity",
         "multi": true,
         "name": "activity",
-        "query": "SELECT DISTINCT activity_type FROM work_logs WHERE activity_type IS NOT NULL ORDER BY activity_type",
+        "query": "SELECT DISTINCT task_new FROM xl_projecttimes WHERE task_new IS NOT NULL ORDER BY task_new",
         "refresh": 1,
         "type": "query"
       },
@@ -101,26 +112,39 @@
         "label": "Employee",
         "multi": true,
         "name": "employee",
-        "query": "SELECT DISTINCT employee_name FROM work_logs WHERE employee_name IS NOT NULL ORDER BY employee_name",
+        "query": "SELECT DISTINCT mitarbeiter FROM xl_projecttimes WHERE mitarbeiter IS NOT NULL ORDER BY mitarbeiter",
         "refresh": 1,
         "type": "query"
       },
       {
+        "current": {
+          "text": "RW + Sub + Temp",
+          "value": [
+            "RW",
+            "Sub",
+            "Temp"
+          ]
+        },
         "hide": 0,
         "includeAll": true,
         "multi": true,
         "name": "ma_kat",
         "options": [
-          { "text": "RW", "value": "RW" },
-          { "text": "Sub", "value": "Sub" },
-          { "text": "Temp", "value": "Temp" }
+          {
+            "text": "RW",
+            "value": "RW"
+          },
+          {
+            "text": "Sub",
+            "value": "Sub"
+          },
+          {
+            "text": "Temp",
+            "value": "Temp"
+          }
         ],
         "query": "RW,Sub,Temp",
-        "type": "custom",
-        "current": {
-          "text": "RW + Sub + Temp",
-          "value": ["RW", "Sub", "Temp"]
-        }
+        "type": "custom"
       }
     ]
   },
@@ -132,6 +156,6 @@
   "timezone": "",
   "title": "Working time average - 180 days",
   "uid": "admin-working-time-avg-180",
-  "version": 1,
+  "version": 4,
   "weekStart": ""
 }

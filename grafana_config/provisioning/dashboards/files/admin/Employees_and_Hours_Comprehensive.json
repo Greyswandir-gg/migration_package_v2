@@ -1,5 +1,6 @@
 {
   "editable": true,
+  "id": 2926779303952384,
   "panels": [
     {
       "gridPos": {
@@ -8,12 +9,10 @@
         "x": 0,
         "y": 0
       },
-      "title": "Employees per Week (Trend)",
-      "type": "barchart",
       "options": {
-        "xField": "Week",
         "showValue": "always",
         "stacking": "none",
+        "xField": "Week",
         "xTickLabelRotation": -45,
         "xTickLabelSpacing": 80
       },
@@ -24,10 +23,12 @@
             "uid": "${DS_POSTGRES}"
           },
           "format": "table",
-          "rawSql": "\n        SELECT 'Week ' || to_char(work_date, 'IW') as \"Week\",\n               COUNT(DISTINCT CASE WHEN EXTRACT(YEAR FROM work_date) = 2023 THEN employee_name END) as \"2023\",\n               COUNT(DISTINCT CASE WHEN EXTRACT(YEAR FROM work_date) = 2024 THEN employee_name END) as \"2024\",\n               COUNT(DISTINCT CASE WHEN EXTRACT(YEAR FROM work_date) = 2025 THEN employee_name END) as \"2025\",\n               COUNT(DISTINCT CASE WHEN EXTRACT(YEAR FROM work_date) = 2026 THEN employee_name END) as \"2026\"\n        FROM work_logs \n        WHERE work_date::timestamp >= $__timeFrom()\n          AND work_date::timestamp <= $__timeTo()\n          AND department IN (${service:sqlstring})\n          AND activity_type IN (${activity:sqlstring})\n          AND employee_name IN (${employee:sqlstring})\n          AND employment_type IS NOT NULL \n          AND EXTRACT(YEAR FROM work_date)::text IN (${year:sqlstring}) \n          AND to_char(work_date, 'IW') IN (${week:sqlstring})\n          AND (\n              ('RW' IN (${ma_kat:sqlstring}) AND employment_type IN ('Full-time', 'Contract'))\n              OR ('Sub' IN (${ma_kat:sqlstring}) AND employment_type IN ('Part-time', 'Freelancer', 'Subcontractor'))\n              OR ('Temp' IN (${ma_kat:sqlstring}) AND employment_type IN ('Temporary', 'Loan'))\n          )\n        GROUP BY to_char(work_date, 'IW') ORDER BY to_char(work_date, 'IW')\n    ",
+          "rawSql": "\n        SELECT 'Week ' || to_char(datum, 'IW') as \"Week\",\n               COUNT(DISTINCT CASE WHEN EXTRACT(YEAR FROM datum) = 2023 THEN mitarbeiter END) as \"2023\",\n               COUNT(DISTINCT CASE WHEN EXTRACT(YEAR FROM datum) = 2024 THEN mitarbeiter END) as \"2024\",\n               COUNT(DISTINCT CASE WHEN EXTRACT(YEAR FROM datum) = 2025 THEN mitarbeiter END) as \"2025\",\n               COUNT(DISTINCT CASE WHEN EXTRACT(YEAR FROM datum) = 2026 THEN mitarbeiter END) as \"2026\"\n        FROM xl_projecttimes \n        WHERE datum::timestamp >= $__timeFrom()\n          AND datum::timestamp <= $__timeTo()\n          AND ('${service:raw}' = '$__all' OR bereich_neu IN (${service:sqlstring}))\n          AND ('${activity:raw}' = '$__all' OR task_new IN (${activity:sqlstring}))\n          AND ('${employee:raw}' = '$__all' OR mitarbeiter IN (${employee:sqlstring}))\n          AND ma_kat IS NOT NULL \n          AND ('${year:raw}' = '$__all' OR EXTRACT(YEAR FROM datum)::text IN (${year:sqlstring})) \n          AND ('${week:raw}' = '$__all' OR to_char(datum, 'IW') IN (${week:sqlstring}))\n          AND ('${ma_kat:raw}' = '$__all' OR ma_kat IN (${ma_kat:sqlstring}))\n        GROUP BY to_char(datum, 'IW') ORDER BY to_char(datum, 'IW')\n    ",
           "refId": "A"
         }
-      ]
+      ],
+      "title": "Employees per Week (Trend)",
+      "type": "barchart"
     },
     {
       "gridPos": {
@@ -36,12 +37,10 @@
         "x": 12,
         "y": 0
       },
-      "title": "Hours per Month (Trend)",
-      "type": "barchart",
       "options": {
-        "xField": "Month",
         "showValue": "always",
         "stacking": "none",
+        "xField": "Month",
         "xTickLabelRotation": 0
       },
       "targets": [
@@ -51,10 +50,12 @@
             "uid": "${DS_POSTGRES}"
           },
           "format": "table",
-          "rawSql": "\n        SELECT to_char(work_date, 'Mon') as \"Month\",\n               ROUND(SUM(CASE WHEN EXTRACT(YEAR FROM work_date) = 2023 THEN duration ELSE 0 END)::numeric, 0) as \"2023\",\n               ROUND(SUM(CASE WHEN EXTRACT(YEAR FROM work_date) = 2024 THEN duration ELSE 0 END)::numeric, 0) as \"2024\",\n               ROUND(SUM(CASE WHEN EXTRACT(YEAR FROM work_date) = 2025 THEN duration ELSE 0 END)::numeric, 0) as \"2025\",\n               ROUND(SUM(CASE WHEN EXTRACT(YEAR FROM work_date) = 2026 THEN duration ELSE 0 END)::numeric, 0) as \"2026\"\n        FROM work_logs \n        WHERE work_date::timestamp >= $__timeFrom()\n          AND work_date::timestamp <= $__timeTo()\n          AND department IN (${service:sqlstring})\n          AND activity_type IN (${activity:sqlstring})\n          AND employee_name IN (${employee:sqlstring})\n          AND employment_type IS NOT NULL \n          AND EXTRACT(YEAR FROM work_date)::text IN (${year:sqlstring}) \n          AND to_char(work_date, 'IW') IN (${week:sqlstring})\n          AND (\n              ('RW' IN (${ma_kat:sqlstring}) AND employment_type IN ('Full-time', 'Contract'))\n              OR ('Sub' IN (${ma_kat:sqlstring}) AND employment_type IN ('Part-time', 'Freelancer', 'Subcontractor'))\n              OR ('Temp' IN (${ma_kat:sqlstring}) AND employment_type IN ('Temporary', 'Loan'))\n          )\n        GROUP BY to_char(work_date, 'Mon'), EXTRACT(MONTH FROM work_date) ORDER BY EXTRACT(MONTH FROM work_date)\n    ",
+          "rawSql": "\n        SELECT to_char(datum, 'Mon') as \"Month\",\n               ROUND(SUM(CASE WHEN EXTRACT(YEAR FROM datum) = 2023 THEN dauer ELSE 0 END)::numeric, 0) as \"2023\",\n               ROUND(SUM(CASE WHEN EXTRACT(YEAR FROM datum) = 2024 THEN dauer ELSE 0 END)::numeric, 0) as \"2024\",\n               ROUND(SUM(CASE WHEN EXTRACT(YEAR FROM datum) = 2025 THEN dauer ELSE 0 END)::numeric, 0) as \"2025\",\n               ROUND(SUM(CASE WHEN EXTRACT(YEAR FROM datum) = 2026 THEN dauer ELSE 0 END)::numeric, 0) as \"2026\"\n        FROM xl_projecttimes \n        WHERE datum::timestamp >= $__timeFrom()\n          AND datum::timestamp <= $__timeTo()\n          AND ('${service:raw}' = '$__all' OR bereich_neu IN (${service:sqlstring}))\n          AND ('${activity:raw}' = '$__all' OR task_new IN (${activity:sqlstring}))\n          AND ('${employee:raw}' = '$__all' OR mitarbeiter IN (${employee:sqlstring}))\n          AND ma_kat IS NOT NULL \n          AND ('${year:raw}' = '$__all' OR EXTRACT(YEAR FROM datum)::text IN (${year:sqlstring})) \n          AND ('${week:raw}' = '$__all' OR to_char(datum, 'IW') IN (${week:sqlstring}))\n          AND ('${ma_kat:raw}' = '$__all' OR ma_kat IN (${ma_kat:sqlstring}))\n        GROUP BY to_char(datum, 'Mon'), EXTRACT(MONTH FROM datum) ORDER BY EXTRACT(MONTH FROM datum)\n    ",
           "refId": "A"
         }
-      ]
+      ],
+      "title": "Hours per Month (Trend)",
+      "type": "barchart"
     },
     {
       "gridPos": {
@@ -67,25 +68,30 @@
       "type": "row"
     },
     {
+      "fieldConfig": {
+        "defaults": {
+          "custom": {
+            "align": "center"
+          }
+        }
+      },
       "gridPos": {
         "h": 15,
         "w": 7,
         "x": 0,
         "y": 9
       },
-      "title": "Employee Count by Week",
-      "type": "table",
       "options": {
-        "showHeader": true,
         "footer": {
-          "show": true,
+          "fields": [
+            "Count"
+          ],
           "reducer": [
             "sum"
           ],
-          "fields": [
-            "Count"
-          ]
-        }
+          "show": true
+        },
+        "showHeader": true
       },
       "targets": [
         {
@@ -94,31 +100,38 @@
             "uid": "${DS_POSTGRES}"
           },
           "format": "table",
-          "rawSql": "\n        SELECT to_char(work_date, 'IW') as \"Week\",\n               EXTRACT(YEAR FROM work_date)::text as \"Year\",\n               COUNT(DISTINCT employee_name) as \"Count\"\n        FROM work_logs \n        WHERE work_date::timestamp >= $__timeFrom()\n          AND work_date::timestamp <= $__timeTo()\n          AND department IN (${service:sqlstring})\n          AND activity_type IN (${activity:sqlstring})\n          AND employee_name IN (${employee:sqlstring})\n          AND employment_type IS NOT NULL \n          AND EXTRACT(YEAR FROM work_date)::text IN (${year:sqlstring}) \n          AND to_char(work_date, 'IW') IN (${week:sqlstring})\n          AND (\n              ('RW' IN (${ma_kat:sqlstring}) AND employment_type IN ('Full-time', 'Contract'))\n              OR ('Sub' IN (${ma_kat:sqlstring}) AND employment_type IN ('Part-time', 'Freelancer', 'Subcontractor'))\n              OR ('Temp' IN (${ma_kat:sqlstring}) AND employment_type IN ('Temporary', 'Loan'))\n          )\n        GROUP BY 1, 2 ORDER BY 1, 2\n    ",
+          "rawSql": "\n        SELECT to_char(datum, 'IW') as \"Week\",\n               EXTRACT(YEAR FROM datum)::text as \"Year\",\n               COUNT(DISTINCT mitarbeiter) as \"Count\"\n        FROM xl_projecttimes \n        WHERE datum::timestamp >= $__timeFrom()\n          AND datum::timestamp <= $__timeTo()\n          AND ('${service:raw}' = '$__all' OR bereich_neu IN (${service:sqlstring}))\n          AND ('${activity:raw}' = '$__all' OR task_new IN (${activity:sqlstring}))\n          AND ('${employee:raw}' = '$__all' OR mitarbeiter IN (${employee:sqlstring}))\n          AND ma_kat IS NOT NULL \n          AND ('${year:raw}' = '$__all' OR EXTRACT(YEAR FROM datum)::text IN (${year:sqlstring})) \n          AND ('${week:raw}' = '$__all' OR to_char(datum, 'IW') IN (${week:sqlstring}))\n          AND ('${ma_kat:raw}' = '$__all' OR ma_kat IN (${ma_kat:sqlstring}))\n        GROUP BY 1, 2 ORDER BY 1, 2\n    ",
           "refId": "A"
         }
-      ]
+      ],
+      "title": "Employee Count by Week",
+      "type": "table"
     },
     {
+      "fieldConfig": {
+        "defaults": {
+          "custom": {
+            "align": "center"
+          }
+        }
+      },
       "gridPos": {
         "h": 15,
         "w": 8,
         "x": 7,
         "y": 9
       },
-      "title": "Working Hours by Week",
-      "type": "table",
       "options": {
-        "showHeader": true,
         "footer": {
-          "show": true,
+          "fields": [
+            "Hours"
+          ],
           "reducer": [
             "sum"
           ],
-          "fields": [
-            "Hours"
-          ]
-        }
+          "show": true
+        },
+        "showHeader": true
       },
       "targets": [
         {
@@ -127,31 +140,38 @@
             "uid": "${DS_POSTGRES}"
           },
           "format": "table",
-          "rawSql": "\n        SELECT to_char(work_date, 'IW') as \"Week\",\n               EXTRACT(YEAR FROM work_date)::text as \"Year\",\n               ROUND(SUM(duration)::numeric, 0) as \"Hours\"\n        FROM work_logs \n        WHERE work_date::timestamp >= $__timeFrom()\n          AND work_date::timestamp <= $__timeTo()\n          AND department IN (${service:sqlstring})\n          AND activity_type IN (${activity:sqlstring})\n          AND employee_name IN (${employee:sqlstring})\n          AND employment_type IS NOT NULL \n          AND EXTRACT(YEAR FROM work_date)::text IN (${year:sqlstring}) \n          AND to_char(work_date, 'IW') IN (${week:sqlstring})\n          AND (\n              ('RW' IN (${ma_kat:sqlstring}) AND employment_type IN ('Full-time', 'Contract'))\n              OR ('Sub' IN (${ma_kat:sqlstring}) AND employment_type IN ('Part-time', 'Freelancer', 'Subcontractor'))\n              OR ('Temp' IN (${ma_kat:sqlstring}) AND employment_type IN ('Temporary', 'Loan'))\n          )\n        GROUP BY 1, 2 ORDER BY 1, 2\n    ",
+          "rawSql": "\n        SELECT to_char(datum, 'IW') as \"Week\",\n               EXTRACT(YEAR FROM datum)::text as \"Year\",\n               ROUND(SUM(dauer)::numeric, 0) as \"Hours\"\n        FROM xl_projecttimes \n        WHERE datum::timestamp >= $__timeFrom()\n          AND datum::timestamp <= $__timeTo()\n          AND ('${service:raw}' = '$__all' OR bereich_neu IN (${service:sqlstring}))\n          AND ('${activity:raw}' = '$__all' OR task_new IN (${activity:sqlstring}))\n          AND ('${employee:raw}' = '$__all' OR mitarbeiter IN (${employee:sqlstring}))\n          AND ma_kat IS NOT NULL \n          AND ('${year:raw}' = '$__all' OR EXTRACT(YEAR FROM datum)::text IN (${year:sqlstring})) \n          AND ('${week:raw}' = '$__all' OR to_char(datum, 'IW') IN (${week:sqlstring}))\n          AND ('${ma_kat:raw}' = '$__all' OR ma_kat IN (${ma_kat:sqlstring}))\n        GROUP BY 1, 2 ORDER BY 1, 2\n    ",
           "refId": "A"
         }
-      ]
+      ],
+      "title": "Working Hours by Week",
+      "type": "table"
     },
     {
+      "fieldConfig": {
+        "defaults": {
+          "custom": {
+            "align": "center"
+          }
+        }
+      },
       "gridPos": {
         "h": 15,
         "w": 9,
         "x": 15,
         "y": 9
       },
-      "title": "Working Hours by Month",
-      "type": "table",
       "options": {
-        "showHeader": true,
         "footer": {
-          "show": true,
+          "fields": [
+            "Hours"
+          ],
           "reducer": [
             "sum"
           ],
-          "fields": [
-            "Hours"
-          ]
-        }
+          "show": true
+        },
+        "showHeader": true
       },
       "targets": [
         {
@@ -160,10 +180,12 @@
             "uid": "${DS_POSTGRES}"
           },
           "format": "table",
-          "rawSql": "\n        SELECT to_char(work_date, 'Mon') as \"Month\",\n               EXTRACT(YEAR FROM work_date)::text as \"Year\",\n               ROUND(SUM(duration)::numeric, 0) as \"Hours\"\n        FROM work_logs \n        WHERE work_date::timestamp >= $__timeFrom()\n          AND work_date::timestamp <= $__timeTo()\n          AND department IN (${service:sqlstring})\n          AND activity_type IN (${activity:sqlstring})\n          AND employee_name IN (${employee:sqlstring})\n          AND employment_type IS NOT NULL \n          AND EXTRACT(YEAR FROM work_date)::text IN (${year:sqlstring}) \n          AND to_char(work_date, 'IW') IN (${week:sqlstring})\n          AND (\n              ('RW' IN (${ma_kat:sqlstring}) AND employment_type IN ('Full-time', 'Contract'))\n              OR ('Sub' IN (${ma_kat:sqlstring}) AND employment_type IN ('Part-time', 'Freelancer', 'Subcontractor'))\n              OR ('Temp' IN (${ma_kat:sqlstring}) AND employment_type IN ('Temporary', 'Loan'))\n          )\n        GROUP BY 1, EXTRACT(MONTH FROM work_date), 2 ORDER BY EXTRACT(MONTH FROM work_date), 2\n    ",
+          "rawSql": "\n        SELECT to_char(datum, 'Mon') as \"Month\",\n               EXTRACT(YEAR FROM datum)::text as \"Year\",\n               ROUND(SUM(dauer)::numeric, 0) as \"Hours\"\n        FROM xl_projecttimes \n        WHERE datum::timestamp >= $__timeFrom()\n          AND datum::timestamp <= $__timeTo()\n          AND ('${service:raw}' = '$__all' OR bereich_neu IN (${service:sqlstring}))\n          AND ('${activity:raw}' = '$__all' OR task_new IN (${activity:sqlstring}))\n          AND ('${employee:raw}' = '$__all' OR mitarbeiter IN (${employee:sqlstring}))\n          AND ma_kat IS NOT NULL \n          AND ('${year:raw}' = '$__all' OR EXTRACT(YEAR FROM datum)::text IN (${year:sqlstring})) \n          AND ('${week:raw}' = '$__all' OR to_char(datum, 'IW') IN (${week:sqlstring}))\n          AND ('${ma_kat:raw}' = '$__all' OR ma_kat IN (${ma_kat:sqlstring}))\n        GROUP BY 1, EXTRACT(MONTH FROM datum), 2 ORDER BY EXTRACT(MONTH FROM datum), 2\n    ",
           "refId": "A"
         }
-      ]
+      ],
+      "title": "Working Hours by Month",
+      "type": "table"
     },
     {
       "gridPos": {
@@ -176,14 +198,19 @@
       "type": "row"
     },
     {
+      "fieldConfig": {
+        "defaults": {
+          "custom": {
+            "align": "center"
+          }
+        }
+      },
       "gridPos": {
         "h": 15,
         "w": 24,
         "x": 0,
         "y": 25
       },
-      "title": "Detailed Hours by Employee",
-      "type": "table",
       "targets": [
         {
           "datasource": {
@@ -191,10 +218,12 @@
             "uid": "${DS_POSTGRES}"
           },
           "format": "table",
-          "rawSql": "\n        SELECT employee_name as \"Employee\",\n               TO_CHAR(work_date, 'Mon') as \"Month\",\n               EXTRACT(YEAR FROM work_date)::text as \"Year\",\n               ROUND(SUM(duration)::numeric, 2) as \"Hours\"\n        FROM work_logs \n        WHERE work_date::timestamp >= $__timeFrom()\n          AND work_date::timestamp <= $__timeTo()\n          AND department IN (${service:sqlstring})\n          AND activity_type IN (${activity:sqlstring})\n          AND employee_name IN (${employee:sqlstring})\n          AND employment_type IS NOT NULL \n          AND EXTRACT(YEAR FROM work_date)::text IN (${year:sqlstring}) \n          AND to_char(work_date, 'IW') IN (${week:sqlstring})\n          AND (\n              ('RW' IN (${ma_kat:sqlstring}) AND employment_type IN ('Full-time', 'Contract'))\n              OR ('Sub' IN (${ma_kat:sqlstring}) AND employment_type IN ('Part-time', 'Freelancer', 'Subcontractor'))\n              OR ('Temp' IN (${ma_kat:sqlstring}) AND employment_type IN ('Temporary', 'Loan'))\n          )\n        GROUP BY 1, 2, EXTRACT(MONTH FROM work_date), 3\n        ORDER BY 1, EXTRACT(MONTH FROM work_date), 3\n    ",
+          "rawSql": "\n        SELECT mitarbeiter as \"Employee\",\n               TO_CHAR(datum, 'Mon') as \"Month\",\n               EXTRACT(YEAR FROM datum)::text as \"Year\",\n               ROUND(SUM(dauer)::numeric, 2) as \"Hours\"\n        FROM xl_projecttimes \n        WHERE datum::timestamp >= $__timeFrom()\n          AND datum::timestamp <= $__timeTo()\n          AND ('${service:raw}' = '$__all' OR bereich_neu IN (${service:sqlstring}))\n          AND ('${activity:raw}' = '$__all' OR task_new IN (${activity:sqlstring}))\n          AND ('${employee:raw}' = '$__all' OR mitarbeiter IN (${employee:sqlstring}))\n          AND ma_kat IS NOT NULL \n          AND ('${year:raw}' = '$__all' OR EXTRACT(YEAR FROM datum)::text IN (${year:sqlstring})) \n          AND ('${week:raw}' = '$__all' OR to_char(datum, 'IW') IN (${week:sqlstring}))\n          AND ('${ma_kat:raw}' = '$__all' OR ma_kat IN (${ma_kat:sqlstring}))\n        GROUP BY 1, 2, EXTRACT(MONTH FROM datum), 3\n        ORDER BY 1, EXTRACT(MONTH FROM datum), 3\n    ",
           "refId": "A"
         }
-      ]
+      ],
+      "title": "Detailed Hours by Employee",
+      "type": "table"
     }
   ],
   "schemaVersion": 38,
@@ -221,7 +250,7 @@
         "includeAll": true,
         "multi": true,
         "name": "year",
-        "query": "SELECT DISTINCT EXTRACT(YEAR FROM work_date)::text FROM work_logs ORDER BY 1 DESC",
+        "query": "SELECT DISTINCT jahr::text FROM xl_projecttimes ORDER BY 1 DESC",
         "refresh": 1,
         "type": "query"
       },
@@ -234,7 +263,7 @@
         "includeAll": true,
         "multi": true,
         "name": "week",
-        "query": "SELECT DISTINCT to_char(work_date, 'IW') FROM work_logs ORDER BY 1 ASC",
+        "query": "SELECT DISTINCT to_char(datum, 'IW') FROM xl_projecttimes ORDER BY 1 ASC",
         "refresh": 1,
         "type": "query"
       },
@@ -248,7 +277,7 @@
         "label": "Service",
         "multi": true,
         "name": "service",
-        "query": "SELECT DISTINCT department FROM work_logs WHERE department IS NOT NULL ORDER BY department",
+        "query": "SELECT DISTINCT bereich_neu FROM xl_projecttimes WHERE bereich_neu IS NOT NULL ORDER BY bereich_neu",
         "refresh": 1,
         "type": "query"
       },
@@ -262,7 +291,7 @@
         "label": "Activity",
         "multi": true,
         "name": "activity",
-        "query": "SELECT DISTINCT activity_type FROM work_logs WHERE activity_type IS NOT NULL ORDER BY activity_type",
+        "query": "SELECT DISTINCT task_new FROM xl_projecttimes WHERE task_new IS NOT NULL ORDER BY task_new",
         "refresh": 1,
         "type": "query"
       },
@@ -276,11 +305,19 @@
         "label": "Employee",
         "multi": true,
         "name": "employee",
-        "query": "SELECT DISTINCT employee_name FROM work_logs WHERE employee_name IS NOT NULL ORDER BY employee_name",
+        "query": "SELECT DISTINCT mitarbeiter FROM xl_projecttimes WHERE mitarbeiter IS NOT NULL ORDER BY mitarbeiter",
         "refresh": 1,
         "type": "query"
       },
       {
+        "current": {
+          "text": "RW + Sub + Temp",
+          "value": [
+            "RW",
+            "Sub",
+            "Temp"
+          ]
+        },
         "hide": 0,
         "includeAll": true,
         "multi": true,
@@ -300,15 +337,7 @@
           }
         ],
         "query": "RW,Sub,Temp",
-        "type": "custom",
-        "current": {
-          "text": "RW + Sub + Temp",
-          "value": [
-            "RW",
-            "Sub",
-            "Temp"
-          ]
-        }
+        "type": "custom"
       }
     ]
   },
@@ -318,5 +347,5 @@
   },
   "title": "Employees - Analytics & Hours",
   "uid": "adm-empl-comprehensive",
-  "version": 1
+  "version": 4
 }

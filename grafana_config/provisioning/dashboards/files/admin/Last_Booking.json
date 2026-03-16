@@ -2,7 +2,7 @@
   "editable": true,
   "fiscalYearStartMonth": 0,
   "graphTooltip": 0,
-  "id": null,
+  "id": 2926779857600512,
   "links": [],
   "liveNow": false,
   "panels": [
@@ -10,6 +10,13 @@
       "datasource": {
         "type": "grafana-postgresql-datasource",
         "uid": "${DS_POSTGRES}"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "custom": {
+            "align": "center"
+          }
+        }
       },
       "gridPos": {
         "h": 18,
@@ -19,11 +26,23 @@
       },
       "id": 1,
       "options": {
-        "footer": { "fields": "", "reducer": ["sum"], "show": false },
+        "footer": {
+          "fields": "",
+          "reducer": [
+            "sum"
+          ],
+          "show": false
+        },
         "showHeader": true,
         "sortBy": [
-          { "displayName": "MA-Kat", "desc": false },
-          { "displayName": "OffDays", "desc": true }
+          {
+            "desc": false,
+            "displayName": "MA-Kat"
+          },
+          {
+            "desc": true,
+            "displayName": "OffDays"
+          }
         ]
       },
       "pluginVersion": "10.0.0",
@@ -34,7 +53,7 @@
             "uid": "${DS_POSTGRES}"
           },
           "format": "table",
-          "rawSql": "WITH last_per_employee AS (\n  SELECT employee_name, MAX(work_date) AS last_date\n  FROM work_logs\n  WHERE work_date::timestamp >= $__timeFrom()\n    AND work_date::timestamp <= $__timeTo()\n    AND department IN (${service:sqlstring})\n    AND activity_type IN (${activity:sqlstring})\n    AND employee_name IN (${employee:sqlstring})\n    AND employment_type IS NOT NULL\n    AND (\n      ('RW' IN (${ma_kat:sqlstring}) AND employment_type IN ('Full-time', 'Contract'))\n      OR ('Sub' IN (${ma_kat:sqlstring}) AND employment_type IN ('Part-time', 'Freelancer', 'Subcontractor'))\n      OR ('Temp' IN (${ma_kat:sqlstring}) AND employment_type IN ('Temporary', 'Loan'))\n    )\n  GROUP BY employee_name\n),\nlast_row AS (\n  SELECT DISTINCT ON (w.employee_name) w.employee_name, w.work_date, w.employment_type\n  FROM work_logs w\n  JOIN last_per_employee l ON w.employee_name = l.employee_name AND w.work_date = l.last_date\n  WHERE w.department IN (${service:sqlstring})\n    AND w.activity_type IN (${activity:sqlstring})\n    AND (\n      ('RW' IN (${ma_kat:sqlstring}) AND w.employment_type IN ('Full-time', 'Contract'))\n      OR ('Sub' IN (${ma_kat:sqlstring}) AND w.employment_type IN ('Part-time', 'Freelancer', 'Subcontractor'))\n      OR ('Temp' IN (${ma_kat:sqlstring}) AND w.employment_type IN ('Temporary', 'Loan'))\n    )\n  ORDER BY w.employee_name, w.work_date DESC\n)\nSELECT\n  CASE WHEN employment_type IN ('Full-time', 'Contract') THEN 'RW'\n       WHEN employment_type IN ('Part-time', 'Freelancer', 'Subcontractor') THEN 'Sub'\n       WHEN employment_type IN ('Temporary', 'Loan') THEN 'Temp'\n       ELSE COALESCE(employment_type, '') END AS \"MA-Kat\",\n  employee_name AS \"Employee\",\n  TO_CHAR(work_date, 'DD.MM.YYYY') AS \"last transaction\",\n  (CURRENT_DATE - work_date::date)::integer AS \"OffDays\",\n  ROUND(((CURRENT_DATE - work_date::date)::numeric / 30.0), 2) AS \"OffMonth\"\nFROM last_row\nORDER BY \"MA-Kat\", \"OffDays\" DESC",
+          "rawSql": "WITH last_per_employee AS (\n  SELECT mitarbeiter, MAX(datum::date) AS last_date\n  FROM xl_projecttimes\n  WHERE datum::timestamp >= $__timeFrom()\n    AND datum::timestamp <= $__timeTo()\n    AND ('${service:raw}' = '$__all' OR bereich_neu IN (${service:sqlstring}))\n    AND ('${activity:raw}' = '$__all' OR task_new IN (${activity:sqlstring}))\n    AND ('${employee:raw}' = '$__all' OR mitarbeiter IN (${employee:sqlstring}))\n    AND ma_kat IS NOT NULL\n    AND ('${ma_kat:raw}' = '$__all' OR ma_kat IN (${ma_kat:sqlstring}))\n  GROUP BY mitarbeiter\n),\nlast_row AS (\n  SELECT DISTINCT ON (w.mitarbeiter)\n    w.mitarbeiter,\n    w.datum::date AS datum,\n    w.ma_kat\n  FROM xl_projecttimes w\n  JOIN last_per_employee l\n    ON w.mitarbeiter = l.mitarbeiter\n   AND w.datum::date = l.last_date\n  WHERE ('${service:raw}' = '$__all' OR w.bereich_neu IN (${service:sqlstring}))\n    AND ('${activity:raw}' = '$__all' OR w.task_new IN (${activity:sqlstring}))\n    AND ('${employee:raw}' = '$__all' OR w.mitarbeiter IN (${employee:sqlstring}))\n    AND ('${ma_kat:raw}' = '$__all' OR w.ma_kat IN (${ma_kat:sqlstring}))\n  ORDER BY w.mitarbeiter, w.datum DESC\n)\nSELECT\n  COALESCE(ma_kat, '') AS \"MA-Kat\",\n  mitarbeiter AS \"Employee\",\n  TO_CHAR(datum, 'DD.MM.YYYY') AS \"last transaction\",\n  (CURRENT_DATE - datum)::integer AS \"OffDays\",\n  ROUND(((CURRENT_DATE - datum)::numeric / 30.0), 2) AS \"OffMonth\"\nFROM last_row\nORDER BY \"MA-Kat\", \"OffDays\" DESC",
           "refId": "A"
         }
       ],
@@ -45,7 +64,9 @@
   "refresh": "",
   "schemaVersion": 38,
   "style": "dark",
-  "tags": ["admin"],
+  "tags": [
+    "admin"
+  ],
   "templating": {
     "list": [
       {
@@ -58,63 +79,88 @@
         "type": "datasource"
       },
       {
-        "hide": 0,
-        "includeAll": true,
-        "multi": true,
-        "name": "ma_kat",
-        "label": "MA-Kat",
-        "options": [
-          { "text": "RW", "value": "RW" },
-          { "text": "Sub", "value": "Sub" },
-          { "text": "Temp", "value": "Temp" }
-        ],
-        "query": "RW,Sub,Temp",
-        "type": "custom",
         "current": {
           "text": "RW + Sub + Temp",
-          "value": ["RW", "Sub", "Temp"]
-        }
+          "value": [
+            "RW",
+            "Sub",
+            "Temp"
+          ]
+        },
+        "hide": 0,
+        "includeAll": true,
+        "label": "MA-Kat",
+        "multi": true,
+        "name": "ma_kat",
+        "options": [
+          {
+            "text": "RW",
+            "value": "RW"
+          },
+          {
+            "text": "Sub",
+            "value": "Sub"
+          },
+          {
+            "text": "Temp",
+            "value": "Temp"
+          }
+        ],
+        "query": "RW,Sub,Temp",
+        "type": "custom"
       },
       {
-        "datasource": { "type": "grafana-postgresql-datasource", "uid": "${DS_POSTGRES}" },
+        "datasource": {
+          "type": "grafana-postgresql-datasource",
+          "uid": "${DS_POSTGRES}"
+        },
         "hide": 0,
         "includeAll": true,
         "label": "Bereich",
         "multi": true,
         "name": "service",
-        "query": "SELECT DISTINCT department FROM work_logs WHERE department IS NOT NULL ORDER BY department",
+        "query": "SELECT DISTINCT bereich_neu FROM xl_projecttimes WHERE bereich_neu IS NOT NULL ORDER BY bereich_neu",
         "refresh": 1,
         "type": "query"
       },
       {
-        "datasource": { "type": "grafana-postgresql-datasource", "uid": "${DS_POSTGRES}" },
+        "datasource": {
+          "type": "grafana-postgresql-datasource",
+          "uid": "${DS_POSTGRES}"
+        },
         "hide": 0,
         "includeAll": true,
         "label": "Activity",
         "multi": true,
         "name": "activity",
-        "query": "SELECT DISTINCT activity_type FROM work_logs WHERE activity_type IS NOT NULL ORDER BY activity_type",
+        "query": "SELECT DISTINCT task_new FROM xl_projecttimes WHERE task_new IS NOT NULL ORDER BY task_new",
         "refresh": 1,
         "type": "query"
       },
       {
-        "datasource": { "type": "grafana-postgresql-datasource", "uid": "${DS_POSTGRES}" },
+        "datasource": {
+          "type": "grafana-postgresql-datasource",
+          "uid": "${DS_POSTGRES}"
+        },
         "hide": 0,
         "includeAll": true,
         "label": "Employee",
         "multi": true,
         "name": "employee",
-        "query": "SELECT DISTINCT employee_name FROM work_logs WHERE employee_name IS NOT NULL ORDER BY employee_name",
+        "query": "SELECT DISTINCT mitarbeiter FROM xl_projecttimes WHERE mitarbeiter IS NOT NULL ORDER BY mitarbeiter",
         "refresh": 1,
         "type": "query"
       }
     ]
   },
-  "time": { "from": "now-3y", "to": "now" },
+  "time": {
+    "from": "now-3y",
+    "to": "now"
+  },
   "timepicker": {},
   "timezone": "",
   "title": "Last Booking",
   "uid": "admin-last-booking",
-  "version": 1,
+  "version": 9,
   "weekStart": ""
 }

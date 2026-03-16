@@ -1,0 +1,402 @@
+{
+  "editable": true,
+  "fiscalYearStartMonth": 0,
+  "graphTooltip": 0,
+  "id": 3787103612104704,
+  "links": [],
+  "liveNow": false,
+  "panels": [
+    {
+      "datasource": {
+        "type": "grafana-postgresql-datasource",
+        "uid": "${DS_POSTGRES}"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "decimals": 1,
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 8,
+        "x": 0,
+        "y": 0
+      },
+      "id": 10,
+      "options": {
+        "colorMode": "value",
+        "graphMode": "none",
+        "justifyMode": "center",
+        "orientation": "auto",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "textMode": "value"
+      },
+      "pluginVersion": "12.4.0",
+      "targets": [
+        {
+          "datasource": {
+            "type": "grafana-postgresql-datasource",
+            "uid": "${DS_POSTGRES}"
+          },
+          "format": "table",
+          "rawSql": "WITH m AS ( SELECT date_trunc('month', datum::date) AS mth, SUM(dauer)/8.0 AS man_day FROM xl_projecttimes WHERE ('${year:raw}' = '$__all' OR EXTRACT(YEAR FROM datum)::text IN (${year:sqlstring})) GROUP BY 1) SELECT ROUND(SUM(man_day)::numeric, 1) AS \"value\" FROM m",
+          "refId": "A"
+        }
+      ],
+      "title": "Total ManDay (Selected Years)",
+      "type": "stat"
+    },
+    {
+      "datasource": {
+        "type": "grafana-postgresql-datasource",
+        "uid": "${DS_POSTGRES}"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "decimals": 1,
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 8,
+        "x": 8,
+        "y": 0
+      },
+      "id": 11,
+      "options": {
+        "colorMode": "value",
+        "graphMode": "none",
+        "justifyMode": "center",
+        "orientation": "auto",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "textMode": "value"
+      },
+      "pluginVersion": "12.4.0",
+      "targets": [
+        {
+          "datasource": {
+            "type": "grafana-postgresql-datasource",
+            "uid": "${DS_POSTGRES}"
+          },
+          "format": "table",
+          "rawSql": "WITH m AS ( SELECT date_trunc('month', datum::date) AS mth, SUM(dauer)/8.0 AS man_day FROM xl_projecttimes WHERE ('${year:raw}' = '$__all' OR EXTRACT(YEAR FROM datum)::text IN (${year:sqlstring})) GROUP BY 1) SELECT ROUND(AVG(man_day)::numeric, 1) AS \"value\" FROM m",
+          "refId": "A"
+        }
+      ],
+      "title": "Average Monthly ManDay",
+      "type": "stat"
+    },
+    {
+      "datasource": {
+        "type": "grafana-postgresql-datasource",
+        "uid": "${DS_POSTGRES}"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "decimals": 1,
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 8,
+        "x": 16,
+        "y": 0
+      },
+      "id": 12,
+      "options": {
+        "colorMode": "value",
+        "graphMode": "none",
+        "justifyMode": "center",
+        "orientation": "auto",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "textMode": "value"
+      },
+      "pluginVersion": "12.4.0",
+      "targets": [
+        {
+          "datasource": {
+            "type": "grafana-postgresql-datasource",
+            "uid": "${DS_POSTGRES}"
+          },
+          "format": "table",
+          "rawSql": "WITH m AS ( SELECT date_trunc('month', datum::date) AS mth, SUM(dauer)/8.0 AS man_day FROM xl_projecttimes WHERE ('${year:raw}' = '$__all' OR EXTRACT(YEAR FROM datum)::text IN (${year:sqlstring})) GROUP BY 1) SELECT ROUND(MAX(man_day)::numeric, 1) AS \"value\" FROM m",
+          "refId": "A"
+        }
+      ],
+      "title": "Peak Monthly ManDay",
+      "type": "stat"
+    },
+    {
+      "datasource": {
+        "type": "grafana-postgresql-datasource",
+        "uid": "${DS_POSTGRES}"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {}
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 10,
+        "w": 24,
+        "x": 0,
+        "y": 4
+      },
+      "id": 3,
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": false
+        },
+        "orientation": "vertical",
+        "showValue": "auto",
+        "xField": "Period",
+        "xTickLabelRotation": 45
+      },
+      "pluginVersion": "12.4.0",
+      "targets": [
+        {
+          "datasource": {
+            "type": "grafana-postgresql-datasource",
+            "uid": "${DS_POSTGRES}"
+          },
+          "format": "table",
+          "rawSql": "WITH m AS ( SELECT date_trunc('month', datum::date) AS mth, SUM(dauer)/8.0 AS man_day FROM xl_projecttimes WHERE ('${year:raw}' = '$__all' OR EXTRACT(YEAR FROM datum)::text IN (${year:sqlstring})) GROUP BY 1) SELECT to_char(mth, 'Mon YYYY') AS \"Period\", ROUND(man_day::numeric, 1) AS \"ManDay\" FROM m ORDER BY mth",
+          "refId": "A"
+        }
+      ],
+      "title": "Monthly ManDay",
+      "type": "barchart"
+    },
+    {
+      "datasource": {
+        "type": "grafana-postgresql-datasource",
+        "uid": "${DS_POSTGRES}"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "custom": {
+            "align": "center"
+          }
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Month #"
+            },
+            "properties": [
+              {
+                "id": "custom.hidden",
+                "value": true
+              }
+            ]
+          }
+        ]
+      },
+      "gridPos": {
+        "h": 14,
+        "w": 12,
+        "x": 0,
+        "y": 14
+      },
+      "id": 2,
+      "options": {
+        "footer": {
+          "show": false
+        },
+        "showHeader": true,
+        "sortBy": [
+          {
+            "desc": false,
+            "displayName": "Year"
+          },
+          {
+            "desc": false,
+            "displayName": "Month #"
+          }
+        ]
+      },
+      "pluginVersion": "12.4.0",
+      "targets": [
+        {
+          "datasource": {
+            "type": "grafana-postgresql-datasource",
+            "uid": "${DS_POSTGRES}"
+          },
+          "format": "table",
+          "rawSql": "WITH m AS ( SELECT date_trunc('month', datum::date) AS mth, SUM(dauer)/8.0 AS man_day FROM xl_projecttimes WHERE ('${year:raw}' = '$__all' OR EXTRACT(YEAR FROM datum)::text IN (${year:sqlstring})) GROUP BY 1) SELECT EXTRACT(YEAR FROM mth)::int AS \"Year\", to_char(mth, 'Mon') AS \"Month\", EXTRACT(MONTH FROM mth)::int AS \"Month #\", ROUND(man_day::numeric, 1) AS \"ManDay\" FROM m ORDER BY mth",
+          "refId": "A"
+        }
+      ],
+      "title": "Monthly Totals Table",
+      "type": "table"
+    },
+    {
+      "datasource": {
+        "type": "grafana-postgresql-datasource",
+        "uid": "${DS_POSTGRES}"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "custom": {
+            "align": "center"
+          }
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "sort_date"
+            },
+            "properties": [
+              {
+                "id": "custom.hidden",
+                "value": true
+              }
+            ]
+          }
+        ]
+      },
+      "gridPos": {
+        "h": 14,
+        "w": 12,
+        "x": 12,
+        "y": 14
+      },
+      "id": 1,
+      "options": {
+        "footer": {
+          "show": false
+        },
+        "showHeader": true,
+        "sortBy": [
+          {
+            "desc": false,
+            "displayName": "sort_date"
+          }
+        ]
+      },
+      "pluginVersion": "12.4.0",
+      "targets": [
+        {
+          "datasource": {
+            "type": "grafana-postgresql-datasource",
+            "uid": "${DS_POSTGRES}"
+          },
+          "format": "table",
+          "rawSql": "WITH d AS ( SELECT datum::date AS dte, SUM(dauer)/8.0 AS man_day FROM xl_projecttimes WHERE ('${year:raw}' = '$__all' OR EXTRACT(YEAR FROM datum)::text IN (${year:sqlstring})) GROUP BY datum::date) SELECT dte AS \"sort_date\", to_char(dte, 'DD.MM.YYYY') AS \"Date\", ROUND(man_day::numeric, 2) AS \"ManDay\" FROM d ORDER BY dte",
+          "refId": "A"
+        }
+      ],
+      "title": "Daily Values Table",
+      "type": "table"
+    }
+  ],
+  "refresh": "",
+  "schemaVersion": 42,
+  "style": "dark",
+  "tags": [
+    "admin"
+  ],
+  "templating": {
+    "list": [
+      {
+        "hide": 0,
+        "label": "Datasource",
+        "name": "DS_POSTGRES",
+        "options": [],
+        "query": "grafana-postgresql-datasource",
+        "refresh": 1,
+        "type": "datasource"
+      },
+      {
+        "datasource": {
+          "type": "grafana-postgresql-datasource",
+          "uid": "${DS_POSTGRES}"
+        },
+        "hide": 0,
+        "includeAll": true,
+        "label": "Year",
+        "multi": true,
+        "name": "year",
+        "query": "SELECT DISTINCT jahr::text FROM xl_projecttimes ORDER BY 1 DESC",
+        "refresh": 1,
+        "sort": 1,
+        "type": "query"
+      }
+    ]
+  },
+  "time": {
+    "from": "now-3y",
+    "to": "now"
+  },
+  "timepicker": {},
+  "timezone": "",
+  "title": "Man-Day",
+  "uid": "admin-man-day",
+  "version": 8,
+  "weekStart": ""
+}

@@ -2,7 +2,7 @@
   "editable": true,
   "fiscalYearStartMonth": 0,
   "graphTooltip": 0,
-  "id": null,
+  "id": 2926779127791616,
   "links": [],
   "liveNow": false,
   "panels": [
@@ -10,6 +10,13 @@
       "datasource": {
         "type": "grafana-postgresql-datasource",
         "uid": "${DS_POSTGRES}"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "custom": {
+            "align": "center"
+          }
+        }
       },
       "gridPos": {
         "h": 18,
@@ -21,14 +28,16 @@
       "options": {
         "footer": {
           "fields": "",
-          "reducer": ["sum"],
+          "reducer": [
+            "sum"
+          ],
           "show": false
         },
         "showHeader": true,
         "sortBy": [
           {
-            "displayName": "Date",
-            "desc": false
+            "desc": false,
+            "displayName": "Date"
           }
         ]
       },
@@ -40,7 +49,7 @@
             "uid": "${DS_POSTGRES}"
           },
           "format": "table",
-          "rawSql": "SELECT\n  employee_name AS \"Employee\",\n  TO_CHAR(work_date, 'DD.MM.YYYY') AS \"Date\",\n  ROUND(SUM(duration)::numeric, 2) AS \"total\",\n  ROUND(SUM(duration)::numeric, 2) AS \"net total\"\nFROM work_logs\nWHERE work_date::timestamp >= $__timeFrom()\n  AND work_date::timestamp <= $__timeTo()\n  AND employment_type IN (${empl_type:sqlstring})\n  AND department IN (${service:sqlstring})\n  AND activity_type IN (${activity:sqlstring})\n  AND employee_name IN (${employee:sqlstring})\nGROUP BY employee_name, work_date\nORDER BY work_date, employee_name",
+          "rawSql": "SELECT\n  mitarbeiter AS \"Employee\",\n  TO_CHAR(datum::date, 'DD.MM.YYYY') AS \"Date\",\n  ROUND(SUM(dauer)::numeric, 2) AS \"total\",\n  ROUND(\n    CASE\n      WHEN MIN(ma_kat) = 'RW' AND SUM(dauer) > 9 THEN SUM(dauer) - 0.75\n      WHEN MIN(ma_kat) = 'RW' AND SUM(dauer) > 6 THEN SUM(dauer) - 0.5\n      ELSE SUM(dauer)\n    END::numeric,\n    2\n  ) AS \"net total\"\nFROM xl_projecttimes\nWHERE datum::timestamp >= $__timeFrom()\n  AND datum::timestamp <= $__timeTo()\n  AND ('${empl_type:raw}' = '$__all' OR ma_kat IN (${empl_type:sqlstring}))\n  AND ('${service:raw}' = '$__all' OR bereich_neu IN (${service:sqlstring}))\n  AND ('${activity:raw}' = '$__all' OR task_new IN (${activity:sqlstring}))\n  AND ('${employee:raw}' = '$__all' OR mitarbeiter IN (${employee:sqlstring}))\nGROUP BY mitarbeiter, datum::date\nORDER BY datum::date, mitarbeiter",
           "refId": "A"
         }
       ],
@@ -51,7 +60,9 @@
   "refresh": "",
   "schemaVersion": 38,
   "style": "dark",
-  "tags": ["admin"],
+  "tags": [
+    "admin"
+  ],
   "templating": {
     "list": [
       {
@@ -73,7 +84,7 @@
         "label": "Empl Type",
         "multi": true,
         "name": "empl_type",
-        "query": "SELECT DISTINCT employment_type FROM work_logs WHERE employment_type IS NOT NULL ORDER BY employment_type",
+        "query": "SELECT DISTINCT ma_kat FROM xl_projecttimes WHERE ma_kat IS NOT NULL ORDER BY ma_kat",
         "refresh": 1,
         "type": "query"
       },
@@ -87,7 +98,7 @@
         "label": "Service",
         "multi": true,
         "name": "service",
-        "query": "SELECT DISTINCT department FROM work_logs WHERE department IS NOT NULL ORDER BY department",
+        "query": "SELECT DISTINCT bereich_neu FROM xl_projecttimes WHERE bereich_neu IS NOT NULL ORDER BY bereich_neu",
         "refresh": 1,
         "type": "query"
       },
@@ -101,7 +112,7 @@
         "label": "Activity",
         "multi": true,
         "name": "activity",
-        "query": "SELECT DISTINCT activity_type FROM work_logs WHERE activity_type IS NOT NULL ORDER BY activity_type",
+        "query": "SELECT DISTINCT task_new FROM xl_projecttimes WHERE task_new IS NOT NULL ORDER BY task_new",
         "refresh": 1,
         "type": "query"
       },
@@ -115,7 +126,7 @@
         "label": "Employee",
         "multi": true,
         "name": "employee",
-        "query": "SELECT DISTINCT employee_name FROM work_logs WHERE employee_name IS NOT NULL ORDER BY employee_name",
+        "query": "SELECT DISTINCT mitarbeiter FROM xl_projecttimes WHERE mitarbeiter IS NOT NULL ORDER BY mitarbeiter",
         "refresh": 1,
         "type": "query"
       }
@@ -129,6 +140,6 @@
   "timezone": "",
   "title": "Working time net",
   "uid": "admin-working-time-net",
-  "version": 1,
+  "version": 4,
   "weekStart": ""
 }

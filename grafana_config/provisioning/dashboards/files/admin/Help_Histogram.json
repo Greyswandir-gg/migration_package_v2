@@ -2,7 +2,7 @@
   "editable": true,
   "fiscalYearStartMonth": 0,
   "graphTooltip": 0,
-  "id": null,
+  "id": 2926779610136576,
   "links": [],
   "liveNow": false,
   "panels": [
@@ -11,16 +11,26 @@
         "type": "grafana-postgresql-datasource",
         "uid": "${DS_POSTGRES}"
       },
+      "fieldConfig": {
+        "defaults": {
+          "custom": {
+            "align": "center"
+          }
+        },
+        "overrides": []
+      },
       "gridPos": {
-        "h": 12,
+        "h": 22,
         "w": 12,
         "x": 0,
         "y": 0
       },
       "id": 2,
       "options": {
-        "showHeader": true,
-        "footer": { "show": false }
+        "footer": {
+          "show": false
+        },
+        "showHeader": true
       },
       "pluginVersion": "10.0.0",
       "targets": [
@@ -30,7 +40,7 @@
             "uid": "${DS_POSTGRES}"
           },
           "format": "table",
-          "rawSql": "SELECT\n  COALESCE(project_number::text, department, 'N/A') AS \"Tour\",\n  ROUND(duration::numeric, 2) AS \"Duration\"\nFROM work_logs\nWHERE work_date::timestamp >= $__timeFrom()\n  AND work_date::timestamp <= $__timeTo()\n  AND duration IS NOT NULL\n  AND department IN (${service:sqlstring})\n  AND activity_type IN (${activity:sqlstring})\n  AND employee_name IN (${employee:sqlstring})\nORDER BY work_date DESC, duration DESC\nLIMIT 1000",
+          "rawSql": "SELECT\n  COALESCE(projekt_nr::text, bereich_neu, 'N/A') AS \"Tour\",\n  ROUND(dauer::numeric, 2) AS \"Duration\"\nFROM xl_projecttimes\nWHERE datum::timestamp >= $__timeFrom()\n  AND datum::timestamp <= $__timeTo()\n  AND dauer IS NOT NULL\n  AND ('${service:raw}' = '$__all' OR bereich_neu IN (${service:sqlstring}))\n  AND ('${activity:raw}' = '$__all' OR task_new IN (${activity:sqlstring}))\n  AND ('${employee:raw}' = '$__all' OR mitarbeiter IN (${employee:sqlstring}))\n  AND ('${year:raw}' = '$__all' OR EXTRACT(YEAR FROM datum)::text IN (${year:sqlstring}))\nORDER BY datum DESC, dauer DESC\nLIMIT 1000",
           "refId": "A"
         }
       ],
@@ -50,9 +60,13 @@
       },
       "id": 1,
       "options": {
-        "xField": "Bin",
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": false
+        },
         "showValue": "always",
-        "legend": { "displayMode": "list", "placement": "bottom", "showLegend": false }
+        "xField": "Bin"
       },
       "pluginVersion": "10.0.0",
       "targets": [
@@ -62,18 +76,95 @@
             "uid": "${DS_POSTGRES}"
           },
           "format": "table",
-          "rawSql": "SELECT\n  bin_label AS \"Bin\",\n  COUNT(*)::bigint AS \"Frequency\"\nFROM (\n  SELECT duration,\n    CASE\n      WHEN duration <= 2 THEN '≤ 2'\n      WHEN duration <= 5.5 THEN '(2, 5.5]'\n      WHEN duration <= 9 THEN '(5.5, 9]'\n      WHEN duration <= 12.5 THEN '(9, 12.5]'\n      WHEN duration <= 16 THEN '(12.5, 16]'\n      WHEN duration <= 19.5 THEN '(16, 19.5]'\n      WHEN duration <= 23 THEN '(19.5, 23]'\n      WHEN duration <= 26.5 THEN '(23, 26.5]'\n      WHEN duration <= 30 THEN '(26.5, 30]'\n      ELSE '> 30'\n    END AS bin_label,\n    CASE\n      WHEN duration <= 2 THEN 1\n      WHEN duration <= 5.5 THEN 2\n      WHEN duration <= 9 THEN 3\n      WHEN duration <= 12.5 THEN 4\n      WHEN duration <= 16 THEN 5\n      WHEN duration <= 19.5 THEN 6\n      WHEN duration <= 23 THEN 7\n      WHEN duration <= 26.5 THEN 8\n      WHEN duration <= 30 THEN 9\n      ELSE 10\n    END AS sort_order\n  FROM work_logs\n  WHERE work_date::timestamp >= $__timeFrom()\n    AND work_date::timestamp <= $__timeTo()\n    AND duration IS NOT NULL\n    AND department IN (${service:sqlstring})\n    AND activity_type IN (${activity:sqlstring})\n    AND employee_name IN (${employee:sqlstring})\n) sub\nGROUP BY bin_label, sort_order\nORDER BY sort_order",
+          "rawSql": "SELECT\n  bin_label AS \"Bin\",\n  COUNT(*)::bigint AS \"Frequency\"\nFROM (\n  SELECT dauer,\n    CASE\n      WHEN dauer <= 2 THEN '≤ 2'\n      WHEN dauer <= 5.5 THEN '(2, 5.5]'\n      WHEN dauer <= 9 THEN '(5.5, 9]'\n      WHEN dauer <= 12.5 THEN '(9, 12.5]'\n      WHEN dauer <= 16 THEN '(12.5, 16]'\n      WHEN dauer <= 19.5 THEN '(16, 19.5]'\n      WHEN dauer <= 23 THEN '(19.5, 23]'\n      WHEN dauer <= 26.5 THEN '(23, 26.5]'\n      WHEN dauer <= 30 THEN '(26.5, 30]'\n      ELSE '> 30'\n    END AS bin_label,\n    CASE\n      WHEN dauer <= 2 THEN 1\n      WHEN dauer <= 5.5 THEN 2\n      WHEN dauer <= 9 THEN 3\n      WHEN dauer <= 12.5 THEN 4\n      WHEN dauer <= 16 THEN 5\n      WHEN dauer <= 19.5 THEN 6\n      WHEN dauer <= 23 THEN 7\n      WHEN dauer <= 26.5 THEN 8\n      WHEN dauer <= 30 THEN 9\n      ELSE 10\n    END AS sort_order\n  FROM xl_projecttimes\n  WHERE datum::timestamp >= $__timeFrom()\n    AND datum::timestamp <= $__timeTo()\n    AND dauer IS NOT NULL\n    AND ('${service:raw}' = '$__all' OR bereich_neu IN (${service:sqlstring}))\n    AND ('${activity:raw}' = '$__all' OR task_new IN (${activity:sqlstring}))\n    AND ('${employee:raw}' = '$__all' OR mitarbeiter IN (${employee:sqlstring}))\n    AND ('${year:raw}' = '$__all' OR EXTRACT(YEAR FROM datum)::text IN (${year:sqlstring}))\n) sub\nGROUP BY bin_label, sort_order\nORDER BY sort_order",
           "refId": "A"
         }
       ],
       "title": "Duration histogram",
       "type": "barchart"
+    },
+    {
+      "datasource": {
+        "type": "grafana-postgresql-datasource",
+        "uid": "${DS_POSTGRES}"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "drawStyle": "line",
+            "lineInterpolation": "linear",
+            "lineWidth": 2,
+            "pointSize": 4,
+            "showPoints": "always"
+          },
+          "decimals": 2
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Cumulative %"
+            },
+            "properties": [
+              {
+                "id": "unit",
+                "value": "percent"
+              },
+              {
+                "id": "min",
+                "value": 0
+              },
+              {
+                "id": "max",
+                "value": 100
+              }
+            ]
+          }
+        ]
+      },
+      "gridPos": {
+        "h": 10,
+        "w": 12,
+        "x": 12,
+        "y": 12
+      },
+      "id": 4,
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "single",
+          "sort": "none"
+        }
+      },
+      "pluginVersion": "12.4.0",
+      "targets": [
+        {
+          "datasource": {
+            "type": "grafana-postgresql-datasource",
+            "uid": "${DS_POSTGRES}"
+          },
+          "format": "table",
+          "rawSql": "WITH src AS (\n  SELECT\n    CASE\n      WHEN dauer <= 2 THEN '≤ 2'\n      WHEN dauer <= 5.5 THEN '(2, 5.5]'\n      WHEN dauer <= 9 THEN '(5.5, 9]'\n      WHEN dauer <= 12.5 THEN '(9, 12.5]'\n      WHEN dauer <= 16 THEN '(12.5, 16]'\n      WHEN dauer <= 19.5 THEN '(16, 19.5]'\n      WHEN dauer <= 23 THEN '(19.5, 23]'\n      WHEN dauer <= 26.5 THEN '(23, 26.5]'\n      WHEN dauer <= 30 THEN '(26.5, 30]'\n      ELSE '> 30'\n    END AS bin_label,\n    CASE\n      WHEN dauer <= 2 THEN 1\n      WHEN dauer <= 5.5 THEN 2\n      WHEN dauer <= 9 THEN 3\n      WHEN dauer <= 12.5 THEN 4\n      WHEN dauer <= 16 THEN 5\n      WHEN dauer <= 19.5 THEN 6\n      WHEN dauer <= 23 THEN 7\n      WHEN dauer <= 26.5 THEN 8\n      WHEN dauer <= 30 THEN 9\n      ELSE 10\n    END AS sort_order\n  FROM xl_projecttimes\n  WHERE datum::timestamp >= $__timeFrom()\n    AND datum::timestamp <= $__timeTo()\n    AND dauer IS NOT NULL\n    AND ('${service:raw}' = '$__all' OR bereich_neu IN (${service:sqlstring}))\n    AND ('${activity:raw}' = '$__all' OR task_new IN (${activity:sqlstring}))\n    AND ('${employee:raw}' = '$__all' OR mitarbeiter IN (${employee:sqlstring}))\n    AND ('${year:raw}' = '$__all' OR EXTRACT(YEAR FROM datum)::text IN (${year:sqlstring}))\n),\nagg AS (\n  SELECT bin_label, sort_order, COUNT(*)::numeric AS freq\n  FROM src\n  GROUP BY bin_label, sort_order\n)\nSELECT\n  sort_order AS \"Bin #\",\n  ROUND(100.0 * SUM(freq) OVER (ORDER BY sort_order ROWS UNBOUNDED PRECEDING) / NULLIF(SUM(freq) OVER (), 0), 2) AS \"Cumulative %\"\nFROM agg\nORDER BY sort_order",
+          "refId": "A"
+        }
+      ],
+      "title": "Pareto Line (Cumulative %)",
+      "type": "trend"
     }
   ],
   "refresh": "",
   "schemaVersion": 38,
   "style": "dark",
-  "tags": ["admin"],
+  "tags": [
+    "admin"
+  ],
   "templating": {
     "list": [
       {
@@ -86,45 +177,77 @@
         "type": "datasource"
       },
       {
-        "datasource": { "type": "grafana-postgresql-datasource", "uid": "${DS_POSTGRES}" },
+        "current": {
+          "text": "All",
+          "value": [
+            "$__all"
+          ]
+        },
+        "datasource": {
+          "type": "grafana-postgresql-datasource",
+          "uid": "${DS_POSTGRES}"
+        },
+        "hide": 0,
+        "includeAll": true,
+        "label": "Year",
+        "multi": true,
+        "name": "year",
+        "query": "SELECT DISTINCT jahr::text FROM xl_projecttimes ORDER BY 1 DESC",
+        "refresh": 1,
+        "type": "query"
+      },
+      {
+        "datasource": {
+          "type": "grafana-postgresql-datasource",
+          "uid": "${DS_POSTGRES}"
+        },
         "hide": 0,
         "includeAll": true,
         "label": "Service",
         "multi": true,
         "name": "service",
-        "query": "SELECT DISTINCT department FROM work_logs WHERE department IS NOT NULL ORDER BY department",
+        "query": "SELECT DISTINCT bereich_neu FROM xl_projecttimes WHERE bereich_neu IS NOT NULL ORDER BY bereich_neu",
         "refresh": 1,
         "type": "query"
       },
       {
-        "datasource": { "type": "grafana-postgresql-datasource", "uid": "${DS_POSTGRES}" },
+        "datasource": {
+          "type": "grafana-postgresql-datasource",
+          "uid": "${DS_POSTGRES}"
+        },
         "hide": 0,
         "includeAll": true,
         "label": "Activity",
         "multi": true,
         "name": "activity",
-        "query": "SELECT DISTINCT activity_type FROM work_logs WHERE activity_type IS NOT NULL ORDER BY activity_type",
+        "query": "SELECT DISTINCT task_new FROM xl_projecttimes WHERE task_new IS NOT NULL ORDER BY task_new",
         "refresh": 1,
         "type": "query"
       },
       {
-        "datasource": { "type": "grafana-postgresql-datasource", "uid": "${DS_POSTGRES}" },
+        "datasource": {
+          "type": "grafana-postgresql-datasource",
+          "uid": "${DS_POSTGRES}"
+        },
         "hide": 0,
         "includeAll": true,
         "label": "Employee",
         "multi": true,
         "name": "employee",
-        "query": "SELECT DISTINCT employee_name FROM work_logs WHERE employee_name IS NOT NULL ORDER BY employee_name",
+        "query": "SELECT DISTINCT mitarbeiter FROM xl_projecttimes WHERE mitarbeiter IS NOT NULL ORDER BY mitarbeiter",
         "refresh": 1,
         "type": "query"
       }
     ]
   },
-  "time": { "from": "now-2y", "to": "now" },
+  "time": {
+    "from": "now-2y",
+    "to": "now"
+  },
   "timepicker": {},
   "timezone": "",
   "title": "Help Histogram",
   "uid": "admin-help-histogram",
-  "version": 1,
+  "version": 18,
   "weekStart": ""
 }
