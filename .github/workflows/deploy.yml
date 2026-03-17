@@ -1,0 +1,32 @@
+# ─────────────────────────────────────────────────────────────────
+#  Auto-deploy to server on every push to main branch
+#
+#  Required GitHub Secrets (Settings → Secrets → Actions):
+#    SSH_HOST      — server IP, e.g. 217.114.1.173
+#    SSH_USER      — server user, e.g. root
+#    SSH_KEY       — private SSH key (generate with: ssh-keygen -t ed25519)
+#    DEPLOY_PATH   — project path on server, e.g. /root/migration_package_v2
+# ─────────────────────────────────────────────────────────────────
+
+name: Deploy to Server
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Deploy via SSH
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.SSH_HOST }}
+          username: ${{ secrets.SSH_USER }}
+          key: ${{ secrets.SSH_KEY }}
+          script: |
+            cd ${{ secrets.DEPLOY_PATH }}
+            git pull --rebase origin main
+            docker compose -p migration_package_v2 -f docker-compose.remote.yml up -d --build
+            echo "✅ Deployed successfully at $(date)"
