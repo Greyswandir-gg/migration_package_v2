@@ -99,16 +99,23 @@ def load_all_sheets(uploaded_file, ignore_sheets):
 
 def drop_existing_xl_tables(conn, only_tables=None):
     existing = conn.execute(text(
-        "SELECT tablename FROM pg_tables "
-        "WHERE schemaname = 'public' AND tablename LIKE :prefix"
+        "SELECT c.relname AS object_name, c.relkind AS object_kind "
+        "FROM pg_class c "
+        "JOIN pg_namespace n ON n.oid = c.relnamespace "
+        "WHERE n.nspname = 'public' "
+        "  AND c.relname LIKE :prefix "
+        "  AND c.relkind IN ('r', 'p', 'v', 'm')"
     ), {"prefix": f"{TABLE_PREFIX}%"}).fetchall()
     only_tables = {t for t in (only_tables or [])}
     dropped = 0
-    for (table_name,) in existing:
-        if only_tables and table_name not in only_tables:
+    for (object_name, object_kind) in existing:
+        if only_tables and object_name not in only_tables:
             continue
-        if re.match(r"^[a-z0-9_]+$", table_name):
-            conn.execute(text(f'DROP TABLE IF EXISTS "{table_name}" CASCADE'))
+        if re.match(r"^[a-z0-9_]+$", object_name):
+            if object_kind in ("v", "m"):
+                conn.execute(text(f'DROP VIEW IF EXISTS "{object_name}" CASCADE'))
+            else:
+                conn.execute(text(f'DROP TABLE IF EXISTS "{object_name}" CASCADE'))
             dropped += 1
     return dropped
 
@@ -232,7 +239,23 @@ def rebuild_work_logs_if_possible(selected_sheets, conn):
 
     work = work[['owner_login', 'work_date', 'duration', 'department', 'project_number',
                  'activity_type', 'employee_name', 'description', 'employment_type']]
-    work.to_sql('work_logs', conn, if_exists='replace', index=False, method='multi', chunksize=1000)
+
+    table_exists = conn.execute(text(
+        """
+        SELECT EXISTS (
+            SELECT 1
+            FROM information_schema.tables
+            WHERE table_schema = 'public' AND table_name = 'work_logs'
+        )
+        """
+    )).scalar()
+
+    # Keep dependent views intact: clear rows then append instead of DROP/CREATE.
+    if table_exists:
+        conn.execute(text("TRUNCATE TABLE work_logs"))
+        work.to_sql('work_logs', conn, if_exists='append', index=False, method='multi', chunksize=1000)
+    else:
+        work.to_sql('work_logs', conn, if_exists='replace', index=False, method='multi', chunksize=1000)
     return {"ok": True, "rows": len(work)}
 
 def load_mappings():

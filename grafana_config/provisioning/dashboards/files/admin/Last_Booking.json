@@ -53,7 +53,7 @@
             "uid": "${DS_POSTGRES}"
           },
           "format": "table",
-          "rawSql": "WITH last_per_employee AS (\n  SELECT mitarbeiter, MAX(datum::date) AS last_date\n  FROM xl_projecttimes\n  WHERE datum::timestamp >= $__timeFrom()\n    AND datum::timestamp <= $__timeTo()\n    AND ('${service:raw}' = '$__all' OR bereich_neu IN (${service:sqlstring}))\n    AND ('${activity:raw}' = '$__all' OR task_new IN (${activity:sqlstring}))\n    AND ('${employee:raw}' = '$__all' OR mitarbeiter IN (${employee:sqlstring}))\n    AND ma_kat IS NOT NULL\n    AND ('${ma_kat:raw}' = '$__all' OR ma_kat IN (${ma_kat:sqlstring}))\n  GROUP BY mitarbeiter\n),\nlast_row AS (\n  SELECT DISTINCT ON (w.mitarbeiter)\n    w.mitarbeiter,\n    w.datum::date AS datum,\n    w.ma_kat\n  FROM xl_projecttimes w\n  JOIN last_per_employee l\n    ON w.mitarbeiter = l.mitarbeiter\n   AND w.datum::date = l.last_date\n  WHERE ('${service:raw}' = '$__all' OR w.bereich_neu IN (${service:sqlstring}))\n    AND ('${activity:raw}' = '$__all' OR w.task_new IN (${activity:sqlstring}))\n    AND ('${employee:raw}' = '$__all' OR w.mitarbeiter IN (${employee:sqlstring}))\n    AND ('${ma_kat:raw}' = '$__all' OR w.ma_kat IN (${ma_kat:sqlstring}))\n  ORDER BY w.mitarbeiter, w.datum DESC\n)\nSELECT\n  COALESCE(ma_kat, '') AS \"MA-Kat\",\n  mitarbeiter AS \"Employee\",\n  TO_CHAR(datum, 'DD.MM.YYYY') AS \"last transaction\",\n  (CURRENT_DATE - datum)::integer AS \"OffDays\",\n  ROUND(((CURRENT_DATE - datum)::numeric / 30.0), 2) AS \"OffMonth\"\nFROM last_row\nORDER BY \"MA-Kat\", \"OffDays\" DESC",
+          "rawSql": "WITH bounds AS (\n  SELECT MAX(datum::date) AS ref_date\n  FROM xl_projecttimes\n),\nlast_per_employee AS (\n  SELECT mitarbeiter, MAX(datum::date) AS last_date\n  FROM xl_projecttimes\n  WHERE datum::timestamp >= $__timeFrom()\n    AND datum::timestamp <= $__timeTo()\n    AND ('${service:raw}' = '$__all' OR bereich_neu = ANY(ARRAY[${service:sqlstring}]::text[]))\n    AND ('${activity:raw}' = '$__all' OR task_new = ANY(ARRAY[${activity:sqlstring}]::text[]))\n    AND ('${employee:raw}' = '$__all' OR mitarbeiter = ANY(ARRAY[${employee:sqlstring}]::text[]))\n    AND ma_kat IS NOT NULL\n    AND ('${ma_kat:raw}' = '$__all' OR ma_kat = ANY(ARRAY[${ma_kat:sqlstring}]::text[]))\n  GROUP BY mitarbeiter\n),\nlast_row AS (\n  SELECT DISTINCT ON (w.mitarbeiter)\n    w.mitarbeiter,\n    w.datum::date AS datum,\n    w.ma_kat\n  FROM xl_projecttimes w\n  JOIN last_per_employee l\n    ON w.mitarbeiter = l.mitarbeiter\n   AND w.datum::date = l.last_date\n  WHERE ('${service:raw}' = '$__all' OR w.bereich_neu = ANY(ARRAY[${service:sqlstring}]::text[]))\n    AND ('${activity:raw}' = '$__all' OR w.task_new = ANY(ARRAY[${activity:sqlstring}]::text[]))\n    AND ('${employee:raw}' = '$__all' OR w.mitarbeiter = ANY(ARRAY[${employee:sqlstring}]::text[]))\n    AND ('${ma_kat:raw}' = '$__all' OR w.ma_kat = ANY(ARRAY[${ma_kat:sqlstring}]::text[]))\n  ORDER BY w.mitarbeiter, w.datum DESC\n)\nSELECT\n  COALESCE(ma_kat, '') AS \"MA-Kat\",\n  mitarbeiter AS \"Employee\",\n  TO_CHAR(datum, 'DD.MM.YYYY') AS \"last transaction\",\n  ((SELECT ref_date FROM bounds) - datum)::integer AS \"OffDays\",\n  ROUND((((SELECT ref_date FROM bounds) - datum)::numeric / 30.0), 2) AS \"OffMonth\"\nFROM last_row\nORDER BY \"MA-Kat\", \"OffDays\" DESC",
           "refId": "A"
         }
       ],
@@ -80,11 +80,9 @@
       },
       {
         "current": {
-          "text": "RW + Sub + Temp",
+          "text": "Sub",
           "value": [
-            "RW",
-            "Sub",
-            "Temp"
+            "Sub"
           ]
         },
         "hide": 0,
